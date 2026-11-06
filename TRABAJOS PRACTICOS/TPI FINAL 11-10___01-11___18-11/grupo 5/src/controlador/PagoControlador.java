@@ -6,18 +6,21 @@ import vista.PagoVista;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import excepciones.StockInsuficienteException;
 
 /** Coordina el formulario de pago; los importes los calcula el modelo. */
 public final class PagoControlador {
-    private final InicioControlador app;
+    private final Navegacion navegacion;
     private final Venta venta;
     private final Runnable volver;
     private final PagoVista vista = new PagoVista();
 
-    public PagoControlador(InicioControlador app, Venta venta, Runnable volver) {
-        this.app = app;
+    public PagoControlador(Navegacion navegacion, Venta venta, Runnable volver) {
+        this.navegacion = navegacion;
         this.venta = venta;
         this.volver = volver;
+        conectarEventos();
     }
 
     public void mostrar() {
@@ -29,6 +32,11 @@ public final class PagoControlador {
             vista.cliente.setText("Cliente: " + venta.getCliente().getNombre());
         }
 
+        cambiarMedio();
+        navegacion.ventana.mostrar(vista, true);
+    }
+
+    private void conectarEventos() {
         vista.medio.addActionListener(evento -> cambiarMedio());
         vista.volver.addActionListener(evento -> volver.run());
         vista.confirmar.addActionListener(evento -> confirmar());
@@ -50,9 +58,6 @@ public final class PagoControlador {
                 actualizarVuelto();
             }
         });
-
-        cambiarMedio();
-        app.ventana.mostrar(vista);
     }
 
     private void cambiarMedio() {
@@ -65,7 +70,7 @@ public final class PagoControlador {
     private Pago crearPago() {
         if (vista.esEfectivo()) {
             return Pago.enEfectivo(null, LocalDateTime.now(), venta.calcularTotal(),
-                    InicioControlador.dinero(vista.recibido.getText()));
+                    EntradaFormulario.dinero(vista.recibido.getText()));
         }
 
         if (venta.getCliente() == null) {
@@ -83,8 +88,9 @@ public final class PagoControlador {
         }
 
         try {
-            Pago pago = crearPago();
-            vista.vuelto.setText("Vuelto: $ " + pago.calcularVuelto());
+            BigDecimal recibido = EntradaFormulario.dinero(vista.recibido.getText());
+            BigDecimal vuelto = Pago.calcularVuelto(venta.calcularTotal(), recibido);
+            vista.vuelto.setText("Vuelto: $ " + vuelto);
         } catch (IllegalArgumentException error) {
             vista.vuelto.setText(error.getMessage());
         }
@@ -94,11 +100,9 @@ public final class PagoControlador {
         vista.error.setText(" ");
         try {
             Pago pago = crearPago();
-            app.ejecutar(() -> {
-                app.servicio.confirmar(venta, pago);
-                new HistorialVentasControlador(app).mostrarDetalle(venta);
-            });
-        } catch (IllegalArgumentException | IllegalStateException error) {
+            navegacion.servicio.confirmar(venta, pago);
+            navegacion.mostrarDetalle(venta);
+        } catch (IllegalArgumentException | IllegalStateException | StockInsuficienteException error) {
             vista.error.setText(error.getMessage());
         }
     }

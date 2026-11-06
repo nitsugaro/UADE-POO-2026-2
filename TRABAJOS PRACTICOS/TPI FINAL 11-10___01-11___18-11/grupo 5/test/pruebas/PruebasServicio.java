@@ -1,7 +1,7 @@
 package pruebas;
 
 import modelo.*;
-import servicio.VentaServicio;
+import servicio.LibreriaServicio;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -25,7 +25,7 @@ public final class PruebasServicio {
     }
 
     public static void main(String[] args) {
-        VentaServicio servicio = new VentaServicio();
+        LibreriaServicio servicio = new LibreriaServicio();
         Empleado empleado = servicio.empleados().get(0);
         Libro libro = servicio.libros().get(0);
         int inicial = libro.getStock();
@@ -63,6 +63,31 @@ public final class PruebasServicio {
         libro.aumentarStock(Integer.MAX_VALUE - libro.getStock());
         rechaza(() -> servicio.devolver(tarjeta, empleado, "Prueba de límite", true));
         verificar(tarjeta.getEstado() == EstadoVenta.CONFIRMADA && libro.getStock() == Integer.MAX_VALUE);
+        LibreriaServicio catalogo = new LibreriaServicio();
+        Libro editable = catalogo.libros().get(0);
+        catalogo.cambiarPrecio(editable, new BigDecimal("123.45"));
+        verificar(editable.getPrecioVenta().compareTo(new BigDecimal("123.45")) == 0);
+        catalogo.ingresarStock(editable, 3);
+        verificar(editable.getStock() == 13);
+        catalogo.cambiarActividad(editable, false);
+        verificar(!editable.isActivo());
+        catalogo.cambiarActividad(editable, true);
+        verificar(editable.isActivo());
+        rechaza(() -> catalogo.cambiarPrecio(editable, BigDecimal.ZERO));
+        verificar(editable.getPrecioVenta().compareTo(new BigDecimal("123.45")) == 0);
+        rechaza(() -> catalogo.ingresarStock(libro, 1));
+        verificar(servicio.clientes().size() == 1 && catalogo.clientes().isEmpty());
+
+        Venta borrador = catalogo.nuevaVenta(catalogo.empleados().get(0));
+        borrador.agregarLibro(editable, 1);
+        BigDecimal vuelto = Pago.calcularVuelto(borrador.calcularTotal(), new BigDecimal("200.00"));
+        verificar(vuelto.compareTo(new BigDecimal("76.55")) == 0);
+        verificar(borrador.getPago() == null && borrador.getEstado() == EstadoVenta.EN_PREPARACION);
+        verificar(editable.getStock() == 13);
+        rechaza(() -> Pago.calcularVuelto(borrador.calcularTotal(), new BigDecimal("100")));
+        verificar(Pago.calcularVuelto(new BigDecimal("10"), new BigDecimal("10.005"))
+                .compareTo(new BigDecimal("0.01")) == 0);
+
         System.out.println("OK: " + verificaciones + " verificaciones del servicio");
     }
 }

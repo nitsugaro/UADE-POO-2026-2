@@ -5,49 +5,37 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 
-/** Almacen en memoria de una sesion. Todas las operaciones se ejecutan en el EDT. */
-public final class VentaServicio {
-    private final List<Libro> libros = new ArrayList<>();
-    private final List<Cliente> clientes = new ArrayList<>();
-    private final List<Empleado> empleados = new ArrayList<>();
-    private final List<Venta> ventas = new ArrayList<>();
-    private final List<Devolucion> devoluciones = new ArrayList<>();
-    private long siguienteVenta = 1;
+// Coordina las operaciones de la librería. Se usa desde el hilo de Swing.
+public final class LibreriaServicio {
+    private final DatosSesion datos;
 
-    public VentaServicio() {
-        empleados.add(new Empleado(1L, "E001", "Empleado de ejemplo", true));
-        Autor autor = new Autor(1L, "Autor de ejemplo");
-        Editorial editorial = new Editorial(1L, "Editorial de ejemplo");
-        Categoria categoria = new Categoria(1L, "Programación");
-        libros.add(new Libro(1L, "DEMO-001", "Introducción a Java", new ArrayList<>(List.of(autor)), editorial,
-                categoria, new BigDecimal("25000"), 10, true));
-        libros.add(new Libro(2L, "DEMO-002", "Programación orientada a objetos", new ArrayList<>(List.of(autor)),
-                editorial, categoria, new BigDecimal("32000"), 5, true));
+    public LibreriaServicio() {
+        datos = DatosEjemplo.crear();
     }
 
     public List<Libro> libros() {
-        return List.copyOf(libros);
+        return datos.libros();
     }
 
     public List<Cliente> clientes() {
-        return List.copyOf(clientes);
+        return datos.clientes();
     }
 
     public List<Empleado> empleados() {
-        return List.copyOf(empleados);
+        return datos.empleados();
     }
 
     public List<Venta> ventas() {
-        return List.copyOf(ventas);
+        return datos.ventas();
     }
 
     public List<Devolucion> devoluciones() {
-        return List.copyOf(devoluciones);
+        return datos.devoluciones();
     }
 
     public Cliente crearCliente(String nombre, String dni) {
-        Cliente cliente = new Cliente((long) clientes.size() + 1, nombre, dni);
-        clientes.add(cliente);
+        Cliente cliente = new Cliente(datos.siguienteCliente(), nombre, dni);
+        datos.guardarCliente(cliente);
         return cliente;
     }
 
@@ -55,8 +43,8 @@ public final class VentaServicio {
         if (empleado == null || !empleado.isActivo()) {
             throw new IllegalArgumentException("Seleccioná un empleado activo");
         }
-        Venta venta = new Venta(siguienteVenta++, LocalDateTime.now(), empleado, null);
-        ventas.add(venta);
+        Venta venta = new Venta(datos.siguienteVenta(), LocalDateTime.now(), empleado, null);
+        datos.guardarVenta(venta);
         return venta;
     }
 
@@ -76,17 +64,42 @@ public final class VentaServicio {
         for (DetalleVenta detalle : venta.getDetalles()) {
             Math.addExact(detalle.getLibro().getStock(), detalle.getCantidad());
         }
-        Devolucion devolucion = venta.completarDevolucion((long) devoluciones.size() + 1,
+        Devolucion devolucion = venta.completarDevolucion(datos.siguienteDevolucion(),
                 LocalDateTime.now(), responsable, motivo, aptos);
         for (DetalleVenta detalle : venta.getDetalles()) {
             detalle.getLibro().aumentarStock(detalle.getCantidad());
         }
-        devoluciones.add(devolucion);
+        datos.guardarDevolucion(devolucion);
         return devolucion;
     }
 
+    public void cambiarPrecio(Libro libro, BigDecimal precio) {
+        exigirLibro(libro);
+        libro.cambiarPrecio(precio);
+    }
+
+    public void ingresarStock(Libro libro, int cantidad) {
+        exigirLibro(libro);
+        libro.aumentarStock(cantidad);
+    }
+
+    public void cambiarActividad(Libro libro, boolean activo) {
+        exigirLibro(libro);
+        if (activo) {
+            libro.activar();
+        } else {
+            libro.desactivar();
+        }
+    }
+
+    private void exigirLibro(Libro libro) {
+        if (!datos.libros().contains(libro)) {
+            throw new IllegalArgumentException("El libro no pertenece al catálogo");
+        }
+    }
+
     private void exigirVenta(Venta venta) {
-        if (!ventas.contains(venta)) {
+        if (!datos.ventas().contains(venta)) {
             throw new IllegalArgumentException("La venta no pertenece a esta sesión");
         }
     }

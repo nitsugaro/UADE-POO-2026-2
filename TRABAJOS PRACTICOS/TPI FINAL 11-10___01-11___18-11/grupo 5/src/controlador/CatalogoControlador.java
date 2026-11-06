@@ -4,43 +4,57 @@ import modelo.*;
 import vista.CatalogoVista;
 
 public final class CatalogoControlador {
-    private final InicioControlador app;
+    private final Navegacion navegacion;
     private final CatalogoVista vista = new CatalogoVista();
 
-    public CatalogoControlador(InicioControlador app) {
-        this.app = app;
-        vista.cambiar.addActionListener(e -> app.ejecutar(() -> {
-            seleccionado().cambiarPrecio(InicioControlador.dinero(vista.precio.getText()));
-            actualizar();
-        }));
-        vista.stock.addActionListener(e -> app.ejecutar(() -> {
-            try {
-                vista.cantidad.commitEdit();
-            } catch (java.text.ParseException error) {
-                throw new IllegalArgumentException("Ingresá una cantidad entera válida");
-            }
-            seleccionado().aumentarStock((Integer) vista.cantidad.getValue());
-            actualizar();
-        }));
-        vista.actividad.addActionListener(e -> app.ejecutar(() -> {
+    public CatalogoControlador(Navegacion navegacion) {
+        this.navegacion = navegacion;
+        vista.cambiar.addActionListener(evento -> cambiarPrecio());
+        vista.stock.addActionListener(evento -> ingresarStock());
+        vista.actividad.addActionListener(evento -> cambiarActividad());
+        vista.volver.addActionListener(evento -> navegacion.mostrarInicio());
+    }
+
+    private void cambiarPrecio() {
+        try {
             Libro libro = seleccionado();
-            if (libro.isActivo()) {
-                libro.desactivar();
-            } else {
-                libro.activar();
-            }
+            navegacion.servicio.cambiarPrecio(libro, EntradaFormulario.dinero(vista.precio.getText()));
             actualizar();
-        }));
-        vista.volver.addActionListener(e -> app.mostrar());
+        } catch (IllegalArgumentException error) {
+            navegacion.ventana.error(error);
+        }
+    }
+
+    private void ingresarStock() {
+        try {
+            vista.cantidad.commitEdit();
+            int cantidad = (Integer) vista.cantidad.getValue();
+            navegacion.servicio.ingresarStock(seleccionado(), cantidad);
+            actualizar();
+        } catch (java.text.ParseException error) {
+            navegacion.ventana.informar("Ingresá una cantidad entera válida.");
+        } catch (IllegalArgumentException | ArithmeticException error) {
+            navegacion.ventana.error(error);
+        }
+    }
+
+    private void cambiarActividad() {
+        try {
+            Libro libro = seleccionado();
+            navegacion.servicio.cambiarActividad(libro, !libro.isActivo());
+            actualizar();
+        } catch (IllegalArgumentException error) {
+            navegacion.ventana.error(error);
+        }
     }
 
     private Libro seleccionado() {
-        return app.servicio.libros().get(InicioControlador.seleccionado(vista.libros));
+        return navegacion.servicio.libros().get(EntradaFormulario.seleccionado(vista.libros));
     }
 
     private void actualizar() {
         vista.modelo.setRowCount(0);
-        for (Libro libro : app.servicio.libros()) {
+        for (Libro libro : navegacion.servicio.libros()) {
             String autores = nombresDeAutores(libro);
             String estado = libro.isActivo() ? "Sí" : "No";
 
@@ -72,6 +86,6 @@ public final class CatalogoControlador {
 
     public void mostrar() {
         actualizar();
-        app.ventana.mostrar(vista);
+        navegacion.ventana.mostrar(vista, true);
     }
 }

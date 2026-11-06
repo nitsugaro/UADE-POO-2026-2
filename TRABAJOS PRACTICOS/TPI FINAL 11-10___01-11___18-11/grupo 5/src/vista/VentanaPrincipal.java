@@ -7,13 +7,27 @@ public final class VentanaPrincipal extends JFrame {
     public VentanaPrincipal() {
         super("Librería — El Grupo 5");
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent evento) {
+                confirmarCierre();
+            }
+        });
     }
 
-    public void mostrar(JPanel panel) {
-        boolean cambiarTamano = getContentPane().getClass() != panel.getClass();
+    private void confirmarCierre() {
+        int respuesta = JOptionPane.showConfirmDialog(
+                this, "Los datos de la sesión se perderán. ¿Cerrar?", "Cerrar librería",
+                JOptionPane.YES_NO_OPTION);
+        if (respuesta == JOptionPane.YES_OPTION) {
+            dispose();
+        }
+    }
+
+    public void mostrar(JPanel panel, boolean ajustarTamano) {
         setContentPane(panel);
 
-        if (cambiarTamano || !isVisible()) {
+        if (ajustarTamano || !isVisible()) {
             ajustarTamano(panel);
         }
         revalidate();

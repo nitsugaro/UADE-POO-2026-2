@@ -17,7 +17,11 @@ No procesa pagos bancarios. La devolución reintegra el importe y medio original
 - `vista`: componentes Swing, campos, tablas y mensajes; sin cálculos de negocio.
 - `controlador`: eventos, navegación, conversión de entradas y presentación de errores.
 - `modelo`: reglas, cálculos, estados y validaciones existentes.
-- `servicio/VentaServicio`: datos de sesión y coordinación de venta/devolución y stock.
+- `controlador/Navegacion`: abre las pantallas y conserva el empleado seleccionado.
+- `controlador/EntradaFormulario`: convierte importes y obtiene la fila seleccionada.
+- `servicio/LibreriaServicio`: operaciones de clientes, catálogo, ventas y devoluciones.
+- `servicio/DatosSesion`: listas e identificadores de la sesión en memoria.
+- `servicio/DatosEjemplo`: crea los libros y el empleado de demostración.
 - `aplicacion/Main`: inicia Swing en el Event Dispatch Thread y conecta dependencias.
 - `persistencia`: ejemplos SQLite existentes, independientes de esta interfaz.
 

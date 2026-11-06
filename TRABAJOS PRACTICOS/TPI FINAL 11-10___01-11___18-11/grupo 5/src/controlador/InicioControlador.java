@@ -1,87 +1,42 @@
 package controlador;
 
-import modelo.*;
-import excepciones.StockInsuficienteException;
-import excepciones.DevolucionNoPermitidaException;
-import servicio.VentaServicio;
-import vista.*;
-import javax.swing.*;
-import java.awt.event.*;
-import java.math.BigDecimal;
+import modelo.Empleado;
+import vista.InicioVista;
 
 public final class InicioControlador {
-    final VentanaPrincipal ventana;
-    final VentaServicio servicio;
-    private Empleado empleado;
+    private final Navegacion navegacion;
+    private final InicioVista vista = new InicioVista();
 
-    public InicioControlador(VentanaPrincipal ventana, VentaServicio servicio) {
-        this.ventana = ventana;
-        this.servicio = servicio;
-        ventana.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(WindowEvent event) {
-                int respuesta = JOptionPane.showConfirmDialog(
-                        ventana, "Los datos de la sesión se perderán. ¿Cerrar?", "Cerrar librería",
-                        JOptionPane.YES_NO_OPTION);
+    public InicioControlador(Navegacion navegacion, Empleado seleccionado) {
+        this.navegacion = navegacion;
 
-                if (respuesta == JOptionPane.YES_OPTION) {
-                    ventana.dispose();
-                }
-            }
-        });
+        for (Empleado empleado : navegacion.servicio.empleados()) {
+            vista.empleados.addItem(empleado.getLegajo() + " · " + empleado.getNombre());
+        }
+        if (seleccionado != null) {
+            vista.empleados.setSelectedIndex(navegacion.servicio.empleados().indexOf(seleccionado));
+        }
+
+        vista.venta.addActionListener(evento -> iniciarVenta());
+        vista.historial.addActionListener(evento -> navegacion.mostrarHistorial());
+        vista.catalogo.addActionListener(evento -> navegacion.mostrarCatalogo());
     }
 
     public void mostrar() {
-        InicioVista vista = new InicioVista();
-        for (Empleado item : servicio.empleados()) {
-            vista.empleados.addItem(item.getLegajo() + " · " + item.getNombre());
-        }
-        if (empleado != null) {
-            vista.empleados.setSelectedIndex(servicio.empleados().indexOf(empleado));
-        }
-        vista.venta.addActionListener(e -> ejecutar(() -> {
+        navegacion.ventana.mostrar(vista, true);
+    }
+
+    private void iniciarVenta() {
+        try {
             int indice = vista.empleados.getSelectedIndex();
             if (indice < 0) {
                 throw new IllegalArgumentException("Seleccioná un empleado");
             }
-            empleado = servicio.empleados().get(indice);
-            nuevaVenta();
-        }));
-        vista.historial.addActionListener(e -> new HistorialVentasControlador(this).mostrar());
-        vista.catalogo.addActionListener(e -> new CatalogoControlador(this).mostrar());
-        ventana.mostrar(vista);
-    }
-
-    void nuevaVenta() {
-        if (empleado == null) {
-            mostrar();
-            return;
+            Empleado empleado = navegacion.servicio.empleados().get(indice);
+            navegacion.seleccionarEmpleado(empleado);
+            navegacion.nuevaVenta();
+        } catch (IllegalArgumentException error) {
+            navegacion.ventana.error(error);
         }
-        new VentaControlador(this, servicio.nuevaVenta(empleado)).mostrar();
-    }
-
-    void ejecutar(Runnable accion) {
-        try {
-            accion.run();
-        } catch (IllegalArgumentException | IllegalStateException | ArithmeticException
-                | StockInsuficienteException | DevolucionNoPermitidaException error) {
-            ventana.error(error);
-        }
-    }
-
-    static BigDecimal dinero(String texto) {
-        try {
-            return new BigDecimal(texto.trim().replace(',', '.'));
-        } catch (NumberFormatException error) {
-            throw new IllegalArgumentException("Ingresá un importe numérico válido");
-        }
-    }
-
-    static int seleccionado(JTable tabla) {
-        int fila = tabla.getSelectedRow();
-        if (fila < 0) {
-            throw new IllegalArgumentException("Seleccioná una fila");
-        }
-        return tabla.convertRowIndexToModel(fila);
     }
 }

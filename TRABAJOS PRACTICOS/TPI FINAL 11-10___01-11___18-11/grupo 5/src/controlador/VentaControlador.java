@@ -7,13 +7,13 @@ import javax.swing.event.*;
 import java.util.*;
 
 public final class VentaControlador {
-    private final InicioControlador app;
+    private final Navegacion navegacion;
     private final Venta venta;
     private final VentaVista vista = new VentaVista();
     private final List<Libro> visibles = new ArrayList<>();
 
-    public VentaControlador(InicioControlador app, Venta venta) {
-        this.app = app;
+    public VentaControlador(Navegacion navegacion, Venta venta) {
+        this.navegacion = navegacion;
         this.venta = venta;
         vista.buscar.getDocument().addDocumentListener(new DocumentListener() {
             public void insertUpdate(DocumentEvent e) {
@@ -28,33 +28,76 @@ public final class VentaControlador {
                 catalogo();
             }
         });
-        vista.agregar.addActionListener(e -> accion(() -> {
-            int fila = InicioControlador.seleccionado(vista.catalogo);
+        vista.agregar.addActionListener(evento -> agregarLibro());
+        vista.modificar.addActionListener(evento -> modificarCantidad());
+        vista.quitar.addActionListener(evento -> quitarLibro());
+        vista.aplicar.addActionListener(evento -> aplicarDescuento());
+        vista.quitarDescuento.addActionListener(evento -> quitarDescuento());
+        vista.sinCliente.addActionListener(evento -> quitarCliente());
+        vista.cliente.addActionListener(evento -> seleccionarCliente());
+        vista.pagar.addActionListener(evento -> mostrarPago());
+        vista.cancelar.addActionListener(evento -> cancelarVenta());
+    }
+
+    private void agregarLibro() {
+        try {
+            int fila = EntradaFormulario.seleccionado(vista.catalogo);
             Libro libro = visibles.get(fila);
             venta.agregarLibro(libro, cantidad());
-        }));
-        vista.modificar.addActionListener(e -> accion(() -> venta.modificarCantidad(detalle().getLibro(), cantidad())));
-        vista.quitar.addActionListener(e -> accion(() -> venta.quitarLibro(detalle().getLibro())));
-        vista.aplicar.addActionListener(e -> accion(() -> venta.aplicarDescuento(vista.codigo.getText())));
-        vista.quitarDescuento.addActionListener(e -> accion(venta::quitarDescuento));
-        vista.sinCliente.addActionListener(e -> accion(() -> venta.cambiarCliente(null)));
-        vista.cliente.addActionListener(e -> new ClienteControlador(app, venta, this::mostrar).mostrar());
-        vista.pagar.addActionListener(e -> app.ejecutar(() -> {
-            if (venta.getDetalles().isEmpty()) {
-                throw new IllegalStateException("Agregá al menos un libro");
-            }
-            mostrarPago();
-        }));
-        vista.cancelar.addActionListener(e -> app.ejecutar(() -> {
-            int respuesta = JOptionPane.showConfirmDialog(
-                    app.ventana, "¿Cancelar esta venta?", "Cancelar",
-                    JOptionPane.YES_NO_OPTION);
+            actualizarVenta();
+        } catch (IllegalArgumentException | IllegalStateException | ArithmeticException error) {
+            navegacion.ventana.error(error);
+        }
+    }
 
-            if (respuesta == JOptionPane.YES_OPTION) {
-                venta.cancelar();
-                app.mostrar();
-            }
-        }));
+    private void modificarCantidad() {
+        try {
+            venta.modificarCantidad(detalle().getLibro(), cantidad());
+            actualizarVenta();
+        } catch (IllegalArgumentException | IllegalStateException error) {
+            navegacion.ventana.error(error);
+        }
+    }
+
+    private void quitarLibro() {
+        try {
+            venta.quitarLibro(detalle().getLibro());
+            actualizarVenta();
+        } catch (IllegalArgumentException | IllegalStateException error) {
+            navegacion.ventana.error(error);
+        }
+    }
+
+    private void aplicarDescuento() {
+        try {
+            venta.aplicarDescuento(vista.codigo.getText());
+            actualizarVenta();
+        } catch (IllegalArgumentException | IllegalStateException error) {
+            navegacion.ventana.error(error);
+        }
+    }
+
+    private void quitarDescuento() {
+        venta.quitarDescuento();
+        actualizarVenta();
+    }
+
+    private void quitarCliente() {
+        venta.cambiarCliente(null);
+        actualizarVenta();
+    }
+
+    private void seleccionarCliente() {
+        navegacion.mostrarClientes(venta, this::mostrar);
+    }
+
+    private void cancelarVenta() {
+        int respuesta = JOptionPane.showConfirmDialog(
+                navegacion.ventana, "¿Cancelar esta venta?", "Cancelar", JOptionPane.YES_NO_OPTION);
+        if (respuesta == JOptionPane.YES_OPTION) {
+            venta.cancelar();
+            navegacion.mostrarInicio();
+        }
     }
 
     private int cantidad() {
@@ -67,27 +110,24 @@ public final class VentaControlador {
     }
 
     private DetalleVenta detalle() {
-        return venta.getDetalles().get(InicioControlador.seleccionado(vista.carrito));
+        return venta.getDetalles().get(EntradaFormulario.seleccionado(vista.carrito));
     }
 
-    private void accion(Runnable accion) {
-        app.ejecutar(() -> {
-            accion.run();
-            venta.quitarPago();
-            actualizar();
-        });
+    private void actualizarVenta() {
+        venta.quitarPago();
+        actualizar();
     }
 
     public void mostrar() {
         actualizar();
-        app.ventana.mostrar(vista);
+        navegacion.ventana.mostrar(vista, true);
     }
 
     private void catalogo() {
         String filtro = vista.buscar.getText().trim().toLowerCase(Locale.ROOT);
         visibles.clear();
         vista.catalogoModelo.setRowCount(0);
-        for (Libro libro : app.servicio.libros()) {
+        for (Libro libro : navegacion.servicio.libros()) {
             boolean coincideTitulo = libro.getTitulo().toLowerCase(Locale.ROOT).contains(filtro);
             boolean coincideIsbn = libro.getIsbn().toLowerCase(Locale.ROOT).contains(filtro);
 
@@ -119,6 +159,10 @@ public final class VentaControlador {
     }
 
     private void mostrarPago() {
-        new PagoControlador(app, venta, this::mostrar).mostrar();
+        if (venta.getDetalles().isEmpty()) {
+            navegacion.ventana.informar("Agregá al menos un libro antes de pasar al pago.");
+            return;
+        }
+        navegacion.mostrarPago(venta, this::mostrar);
     }
 }

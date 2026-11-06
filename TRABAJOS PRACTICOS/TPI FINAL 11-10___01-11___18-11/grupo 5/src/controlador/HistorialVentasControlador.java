@@ -5,15 +5,15 @@ import vista.*;
 import java.util.List;
 
 public final class HistorialVentasControlador {
-    private final InicioControlador app;
+    private final Navegacion navegacion;
 
-    public HistorialVentasControlador(InicioControlador app) {
-        this.app = app;
+    public HistorialVentasControlador(Navegacion navegacion) {
+        this.navegacion = navegacion;
     }
 
     public void mostrar() {
         HistorialVentasVista vista = new HistorialVentasVista();
-        List<Venta> ventas = app.servicio.ventas();
+        List<Venta> ventas = navegacion.servicio.ventas();
         for (Venta venta : ventas) {
             String cliente = "Sin cliente";
             if (venta.getCliente() != null) {
@@ -29,13 +29,18 @@ public final class HistorialVentasControlador {
             });
         }
 
-        vista.detalle.addActionListener(e -> app.ejecutar(() -> {
-            int fila = InicioControlador.seleccionado(vista.ventas);
-            Venta venta = ventas.get(fila);
-            mostrarDetalle(venta);
-        }));
-        vista.volver.addActionListener(e -> app.mostrar());
-        app.ventana.mostrar(vista);
+        vista.detalle.addActionListener(evento -> abrirVentaSeleccionada(vista, ventas));
+        vista.volver.addActionListener(e -> navegacion.mostrarInicio());
+        navegacion.ventana.mostrar(vista, true);
+    }
+
+    private void abrirVentaSeleccionada(HistorialVentasVista vista, List<Venta> ventas) {
+        try {
+            int fila = EntradaFormulario.seleccionado(vista.ventas);
+            mostrarDetalle(ventas.get(fila));
+        } catch (IllegalArgumentException error) {
+            navegacion.ventana.error(error);
+        }
     }
 
     public void mostrarDetalle(Venta venta) {
@@ -67,7 +72,7 @@ public final class HistorialVentasControlador {
             texto.append("\nVuelto: $ ").append(venta.getPago().calcularVuelto());
         }
 
-        for (Devolucion devolucion : app.servicio.devoluciones()) {
+        for (Devolucion devolucion : navegacion.servicio.devoluciones()) {
             if (devolucion.getVentaOriginal() == venta) {
                 texto.append("\n\nDevolución: ").append(devolucion.getFecha());
                 texto.append("\nResponsable: ").append(devolucion.getEmpleadoResponsable().getNombre());
@@ -80,9 +85,9 @@ public final class HistorialVentasControlador {
         vista.detalle.setText(texto.toString());
         vista.detalle.setCaretPosition(0);
         vista.devolver.setEnabled(venta.getEstado() == EstadoVenta.CONFIRMADA);
-        vista.devolver.addActionListener(e -> new DevolucionControlador(app, venta).mostrar());
-        vista.inicio.addActionListener(e -> app.mostrar());
-        vista.nueva.addActionListener(e -> app.ejecutar(app::nuevaVenta));
-        app.ventana.mostrar(vista);
+        vista.devolver.addActionListener(e -> navegacion.mostrarDevolucion(venta));
+        vista.inicio.addActionListener(e -> navegacion.mostrarInicio());
+        vista.nueva.addActionListener(evento -> navegacion.nuevaVenta());
+        navegacion.ventana.mostrar(vista, true);
     }
 }

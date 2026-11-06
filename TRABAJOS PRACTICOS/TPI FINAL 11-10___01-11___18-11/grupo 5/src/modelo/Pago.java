@@ -39,6 +39,15 @@ public final class Pago {
         return new Pago(id, fecha, MedioPago.TARJETA, importe, null, referencia);
     }
 
+    public static BigDecimal calcularVuelto(BigDecimal total, BigDecimal recibido) {
+        BigDecimal importe = Validaciones.precio(total);
+        BigDecimal monto = Validaciones.dinero(recibido);
+        if (monto.compareTo(importe) < 0) {
+            throw new IllegalArgumentException("Monto recibido insuficiente");
+        }
+        return monto.subtract(importe);
+    }
+
     public BigDecimal calcularVuelto() {
         if (medioPago == MedioPago.EFECTIVO) {
             return montoRecibido.subtract(importePagado);
