@@ -10,7 +10,8 @@ import java.sql.Statement;
 
 /** Abre una conexion nueva por operacion; quien la recibe debe cerrarla. */
 public final class ConexionSQLite {
-    private ConexionSQLite() { }
+    private ConexionSQLite() {
+    }
 
     public static Path rutaPredeterminada() {
         return Path.of(System.getProperty("tpo.db", "datos/libreria.db"));
@@ -43,7 +44,7 @@ public final class ConexionSQLite {
     /** Crea las tablas iniciales sin borrar datos existentes. */
     public static void inicializar(Path archivo) throws SQLException {
         try (Connection conexion = abrir(archivo);
-             Statement sentencia = conexion.createStatement()) {
+                Statement sentencia = conexion.createStatement()) {
             sentencia.executeUpdate("""
                 CREATE TABLE IF NOT EXISTS clientes (
                     id INTEGER PRIMARY KEY,

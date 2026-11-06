@@ -27,16 +27,18 @@ public final class Venta {
     }
 
     private void exigirPreparacion() {
-        if (estado != EstadoVenta.EN_PREPARACION)
+        if (estado != EstadoVenta.EN_PREPARACION) {
             throw new IllegalStateException("La venta no esta en preparacion");
+        }
     }
 
     private int buscarLibro(Libro libro) {
         Objects.requireNonNull(libro, "Libro obligatorio");
         for (int i = 0; i < detalles.size(); i++) {
             Libro existente = detalles.get(i).getLibro();
-            if (existente == libro || (existente.getId() != null && existente.getId().equals(libro.getId())))
+            if (existente == libro || (existente.getId() != null && existente.getId().equals(libro.getId()))) {
                 return i;
+            }
         }
         return -1;
     }
@@ -45,8 +47,9 @@ public final class Venta {
         exigirPreparacion();
         Validaciones.cantidad(cantidad);
         int indice = buscarLibro(libro);
-        if (indice < 0) detalles.add(new DetalleVenta(libro, cantidad));
-        else {
+        if (indice < 0) {
+            detalles.add(new DetalleVenta(libro, cantidad));
+        } else {
             DetalleVenta detalle = detalles.get(indice);
             detalles.set(indice, detalle.conCantidad(Math.addExact(detalle.getCantidad(), cantidad)));
         }
@@ -56,14 +59,18 @@ public final class Venta {
         exigirPreparacion();
         Validaciones.cantidad(cantidad);
         int indice = buscarLibro(libro);
-        if (indice < 0) throw new IllegalArgumentException("El libro no esta en la venta");
+        if (indice < 0) {
+            throw new IllegalArgumentException("El libro no esta en la venta");
+        }
         detalles.set(indice, detalles.get(indice).conCantidad(cantidad));
     }
 
     public void quitarLibro(Libro libro) {
         exigirPreparacion();
         int indice = buscarLibro(libro);
-        if (indice < 0) throw new IllegalArgumentException("El libro no esta en la venta");
+        if (indice < 0) {
+            throw new IllegalArgumentException("El libro no esta en la venta");
+        }
         detalles.remove(indice);
     }
 
@@ -74,7 +81,9 @@ public final class Venta {
 
     public void aplicarDescuento(String codigo) {
         exigirPreparacion();
-        if (descuento != null) throw new IllegalStateException("La venta ya tiene descuento");
+        if (descuento != null) {
+            throw new IllegalStateException("La venta ya tiene descuento");
+        }
         descuento = Descuento.desdeCodigo(codigo);
     }
 
@@ -95,15 +104,22 @@ public final class Venta {
 
     public BigDecimal calcularSubtotal() {
         BigDecimal subtotal = new BigDecimal("0.00");
-        for (DetalleVenta detalle : detalles) subtotal = subtotal.add(detalle.calcularSubtotal());
+        for (DetalleVenta detalle : detalles) {
+            subtotal = subtotal.add(detalle.calcularSubtotal());
+        }
         return subtotal;
     }
 
     public BigDecimal calcularDescuento() {
-        return descuento == null ? new BigDecimal("0.00") : descuento.calcularImporte(calcularSubtotal());
+        if (descuento == null) {
+            return new BigDecimal("0.00");
+        }
+        return descuento.calcularImporte(calcularSubtotal());
     }
 
-    public BigDecimal calcularTotal() { return calcularSubtotal().subtract(calcularDescuento()); }
+    public BigDecimal calcularTotal() {
+        return calcularSubtotal().subtract(calcularDescuento());
+    }
 
     public void cancelar() {
         exigirPreparacion();
@@ -116,19 +132,30 @@ public final class Venta {
      */
     public void confirmar() {
         exigirPreparacion();
-        if (detalles.isEmpty()) throw new IllegalStateException("La venta no tiene detalles");
-        if (!empleado.isActivo()) throw new IllegalStateException("Empleado inactivo");
+        if (detalles.isEmpty()) {
+            throw new IllegalStateException("La venta no tiene detalles");
+        }
+        if (!empleado.isActivo()) {
+            throw new IllegalStateException("Empleado inactivo");
+        }
         for (DetalleVenta detalle : detalles) {
             Libro libro = detalle.getLibro();
-            if (!libro.isActivo()) throw new IllegalStateException("Libro inactivo");
-            if (!libro.hayDisponibilidad(detalle.getCantidad()))
+            if (!libro.isActivo()) {
+                throw new IllegalStateException("Libro inactivo");
+            }
+            if (!libro.hayDisponibilidad(detalle.getCantidad())) {
                 throw new StockInsuficienteException("Stock insuficiente para " + detalle.getTitulo());
+            }
         }
-        if (pago == null) throw new IllegalStateException("Falta el pago");
-        if (pago.getMedioPago() == MedioPago.TARJETA && cliente == null)
+        if (pago == null) {
+            throw new IllegalStateException("Falta el pago");
+        }
+        if (pago.getMedioPago() == MedioPago.TARJETA && cliente == null) {
             throw new IllegalStateException("El pago con tarjeta requiere cliente");
-        if (pago.getImportePagado().compareTo(calcularTotal()) != 0)
+        }
+        if (pago.getImportePagado().compareTo(calcularTotal()) != 0) {
             throw new IllegalStateException("El pago no coincide con el total");
+        }
         estado = EstadoVenta.CONFIRMADA;
     }
 
@@ -136,21 +163,43 @@ public final class Venta {
      * Completa una devolucion total. NO repone stock.
      * La consulta de PoliticaDevolucion nunca modifica esta venta.
      */
-    public Devolucion completarDevolucion(Long idDevolucion, LocalDateTime fechaDevolucion, Empleado responsable, String motivo, boolean aptosParaReventa) {
+    public Devolucion completarDevolucion(Long idDevolucion, LocalDateTime fechaDevolucion, Empleado responsable,
+            String motivo, boolean aptosParaReventa) {
         new PoliticaDevolucion().validar(this, fechaDevolucion, motivo, aptosParaReventa);
         Devolucion devolucion = new Devolucion(idDevolucion, this, fechaDevolucion, responsable, motivo);
         estado = EstadoVenta.DEVUELTA;
         return devolucion;
     }
 
-    public Long getId() { return id; }
-    public LocalDateTime getFecha() { return fecha; }
-    public Empleado getEmpleado() { return empleado; }
-    public Cliente getCliente() { return cliente; }
+    public Long getId() {
+        return id;
+    }
+
+    public LocalDateTime getFecha() {
+        return fecha;
+    }
+
+    public Empleado getEmpleado() {
+        return empleado;
+    }
+
+    public Cliente getCliente() {
+        return cliente;
+    }
+
     public List<DetalleVenta> getDetalles() {
         return Collections.unmodifiableList(new ArrayList<>(detalles));
     }
-    public Descuento getDescuento() { return descuento; }
-    public Pago getPago() { return pago; }
-    public EstadoVenta getEstado() { return estado; }
+
+    public Descuento getDescuento() {
+        return descuento;
+    }
+
+    public Pago getPago() {
+        return pago;
+    }
+
+    public EstadoVenta getEstado() {
+        return estado;
+    }
 }

@@ -13,15 +13,17 @@ public final class Pago {
     private final BigDecimal montoRecibido;
     private final String referenciaAutorizacion;
 
-    private Pago(Long id, LocalDateTime fecha, MedioPago medio, BigDecimal importe, BigDecimal recibido, String referencia) {
+    private Pago(Long id, LocalDateTime fecha, MedioPago medio, BigDecimal importe, BigDecimal recibido,
+            String referencia) {
         this.id = Validaciones.id(id);
         this.fecha = Objects.requireNonNull(fecha, "Fecha obligatoria");
         this.medioPago = Objects.requireNonNull(medio, "Medio obligatorio");
         this.importePagado = Validaciones.precio(importe);
         if (medio == MedioPago.EFECTIVO) {
             this.montoRecibido = Validaciones.dinero(recibido);
-            if (montoRecibido.compareTo(importePagado) < 0)
+            if (montoRecibido.compareTo(importePagado) < 0) {
                 throw new IllegalArgumentException("Monto recibido insuficiente");
+            }
             this.referenciaAutorizacion = null;
         } else {
             this.montoRecibido = null;
@@ -38,13 +40,33 @@ public final class Pago {
     }
 
     public BigDecimal calcularVuelto() {
-        return medioPago == MedioPago.EFECTIVO ? montoRecibido.subtract(importePagado) : new BigDecimal("0.00");
+        if (medioPago == MedioPago.EFECTIVO) {
+            return montoRecibido.subtract(importePagado);
+        }
+        return new BigDecimal("0.00");
     }
 
-    public Long getId() { return id; }
-    public LocalDateTime getFecha() { return fecha; }
-    public MedioPago getMedioPago() { return medioPago; }
-    public BigDecimal getImportePagado() { return importePagado; }
-    public BigDecimal getMontoRecibido() { return montoRecibido; }
-    public String getReferenciaAutorizacion() { return referenciaAutorizacion; }
+    public Long getId() {
+        return id;
+    }
+
+    public LocalDateTime getFecha() {
+        return fecha;
+    }
+
+    public MedioPago getMedioPago() {
+        return medioPago;
+    }
+
+    public BigDecimal getImportePagado() {
+        return importePagado;
+    }
+
+    public BigDecimal getMontoRecibido() {
+        return montoRecibido;
+    }
+
+    public String getReferenciaAutorizacion() {
+        return referenciaAutorizacion;
+    }
 }

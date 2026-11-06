@@ -14,21 +14,30 @@ public final class PruebasModelo {
     private static int verificaciones;
     private static final LocalDateTime FECHA = LocalDateTime.of(2026, 10, 10, 23, 30);
 
-    private static BigDecimal dinero(String valor) { return new BigDecimal(valor); }
-    private static Empleado empleado() { return new Empleado(null, "E1", "Ana", true); }
+    private static BigDecimal dinero(String valor) {
+        return new BigDecimal(valor);
+    }
+
+    private static Empleado empleado() {
+        return new Empleado(null, "E1", "Ana", true);
+    }
+
     private static Libro libro(String precio, int stock) {
         return new Libro(null, "978-test", "POO", Arrays.asList(new Autor(null, "Autor")),
                 new Editorial(null, "Editorial"), new Categoria(null, "Programacion"),
                 dinero(precio), stock, true);
     }
+
     private static Venta venta(Libro libro) {
         Venta venta = new Venta(null, FECHA, empleado(), null);
         venta.agregarLibro(libro, 1);
         return venta;
     }
+
     private static void pagar(Venta venta) {
         venta.registrarPago(Pago.enEfectivo(null, FECHA, venta.calcularTotal(), venta.calcularTotal()));
     }
+
     private static Venta confirmada() {
         Venta venta = venta(libro("100", 10));
         venta.aplicarDescuento("HOTSALE");
@@ -36,18 +45,25 @@ public final class PruebasModelo {
         venta.confirmar();
         return venta;
     }
+
     private static void comprobar(boolean condicion) {
-        if (!condicion) throw new AssertionError("Fallo en verificacion " + (verificaciones + 1));
+        if (!condicion) {
+            throw new AssertionError("Fallo en verificacion " + (verificaciones + 1));
+        }
         verificaciones++;
     }
+
     private static void importe(String esperado, BigDecimal real) {
         comprobar(dinero(esperado).compareTo(real) == 0 && real.scale() == 2);
     }
+
     private static void falla(Class<? extends Throwable> tipo, Runnable accion) {
         try {
             accion.run();
         } catch (Throwable error) {
-            if (!tipo.isInstance(error)) throw new AssertionError("Excepcion inesperada", error);
+            if (!tipo.isInstance(error)) {
+                throw new AssertionError("Excepcion inesperada", error);
+            }
             verificaciones++;
             return;
         }

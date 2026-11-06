@@ -9,11 +9,20 @@ public final class Cliente {
         this.id = Validaciones.id(id);
         this.nombre = Validaciones.texto(nombre, "Nombre");
         this.dni = Validaciones.texto(dni, "DNI");
-        if (!this.dni.matches("[0-9]+"))
+        if (!this.dni.matches("[0-9]+")) {
             throw new IllegalArgumentException("El DNI debe contener solo digitos");
+        }
     }
 
-    public Long getId() { return id; }
-    public String getNombre() { return nombre; }
-    public String getDni() { return dni; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public String getDni() {
+        return dni;
+    }
 }

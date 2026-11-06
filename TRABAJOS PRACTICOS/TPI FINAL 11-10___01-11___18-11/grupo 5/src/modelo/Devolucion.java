@@ -19,21 +19,43 @@ public final class Devolucion {
         this.id = Validaciones.id(id);
         this.ventaOriginal = Objects.requireNonNull(ventaOriginal, "Venta obligatoria");
         this.fecha = Objects.requireNonNull(fecha, "Fecha obligatoria");
-        if (responsable == null || !responsable.isActivo())
+        if (responsable == null || !responsable.isActivo()) {
             throw new DevolucionNoPermitidaException("Se requiere un empleado responsable activo");
-        if (ventaOriginal.getEstado() != EstadoVenta.CONFIRMADA || ventaOriginal.getPago() == null)
+        }
+        if (ventaOriginal.getEstado() != EstadoVenta.CONFIRMADA || ventaOriginal.getPago() == null) {
             throw new DevolucionNoPermitidaException("La venta debe estar confirmada y pagada");
+        }
         this.empleadoResponsable = responsable;
         this.motivo = Validaciones.texto(motivo, "Motivo");
         this.importeReintegrado = ventaOriginal.getPago().getImportePagado();
         this.medioReintegro = ventaOriginal.getPago().getMedioPago();
     }
 
-    public Long getId() { return id; }
-    public Venta getVentaOriginal() { return ventaOriginal; }
-    public LocalDateTime getFecha() { return fecha; }
-    public Empleado getEmpleadoResponsable() { return empleadoResponsable; }
-    public String getMotivo() { return motivo; }
-    public BigDecimal getImporteReintegrado() { return importeReintegrado; }
-    public MedioPago getMedioReintegro() { return medioReintegro; }
+    public Long getId() {
+        return id;
+    }
+
+    public Venta getVentaOriginal() {
+        return ventaOriginal;
+    }
+
+    public LocalDateTime getFecha() {
+        return fecha;
+    }
+
+    public Empleado getEmpleadoResponsable() {
+        return empleadoResponsable;
+    }
+
+    public String getMotivo() {
+        return motivo;
+    }
+
+    public BigDecimal getImporteReintegrado() {
+        return importeReintegrado;
+    }
+
+    public MedioPago getMedioReintegro() {
+        return medioReintegro;
+    }
 }

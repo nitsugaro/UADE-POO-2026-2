@@ -36,8 +36,8 @@ public final class PruebasSQLite {
                 exigir(dao.listar().size() == 1, "Rechazo sin insercion duplicada");
             }
             try (Connection conexion = ConexionSQLite.abrir(archivo);
-                 Statement sentencia = conexion.createStatement();
-                 ResultSet resultado = sentencia.executeQuery("PRAGMA foreign_keys")) {
+                    Statement sentencia = conexion.createStatement();
+                    ResultSet resultado = sentencia.executeQuery("PRAGMA foreign_keys")) {
                 exigir(resultado.next() && resultado.getInt(1) == 1, "Claves foraneas activas");
             }
             System.out.println("OK: 9 verificaciones de SQLite");
@@ -49,6 +49,8 @@ public final class PruebasSQLite {
     }
 
     private static void exigir(boolean condicion, String mensaje) {
-        if (!condicion) throw new AssertionError(mensaje);
+        if (!condicion) {
+            throw new AssertionError(mensaje);
+        }
     }
 }

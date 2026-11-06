@@ -10,6 +10,11 @@ public final class Autor {
         this.nombre = Validaciones.texto(nombre, "Nombre");
     }
 
-    public Long getId() { return id; }
-    public String getNombre() { return nombre; }
+    public Long getId() {
+        return id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
 }

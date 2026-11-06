@@ -12,7 +12,8 @@ public final class DetalleVenta {
     private final String isbn;
 
     DetalleVenta(Libro libro, int cantidad) {
-        this(Objects.requireNonNull(libro, "Libro obligatorio"), cantidad, libro.getPrecioVenta(), libro.getTitulo(), libro.getIsbn());
+        this(Objects.requireNonNull(libro, "Libro obligatorio"), cantidad, libro.getPrecioVenta(),
+                libro.getTitulo(), libro.getIsbn());
     }
 
     private DetalleVenta(Libro libro, int cantidad, BigDecimal precio, String titulo, String isbn) {
@@ -27,10 +28,27 @@ public final class DetalleVenta {
         return new DetalleVenta(libro, cantidad, precioUnitario, titulo, isbn);
     }
 
-    public BigDecimal calcularSubtotal() { return precioUnitario.multiply(BigDecimal.valueOf(cantidad)); }
-    public Libro getLibro() { return libro; }
-    public int getCantidad() { return cantidad; }
-    public BigDecimal getPrecioUnitario() { return precioUnitario; }
-    public String getTitulo() { return titulo; }
-    public String getIsbn() { return isbn; }
+    public BigDecimal calcularSubtotal() {
+        return precioUnitario.multiply(BigDecimal.valueOf(cantidad));
+    }
+
+    public Libro getLibro() {
+        return libro;
+    }
+
+    public int getCantidad() {
+        return cantidad;
+    }
+
+    public BigDecimal getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public String getTitulo() {
+        return titulo;
+    }
+
+    public String getIsbn() {
+        return isbn;
+    }
 }

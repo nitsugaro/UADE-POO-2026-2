@@ -22,15 +22,17 @@ public final class ClienteDAO {
             throw new IllegalArgumentException("Guardar requiere un cliente nuevo con ID null");
         }
         try (Connection conexion = ConexionSQLite.abrir(archivo);
-             PreparedStatement sentencia = conexion.prepareStatement(
-                     "INSERT INTO clientes (nombre, dni) VALUES (?, ?)")) {
+                PreparedStatement sentencia = conexion.prepareStatement(
+                "INSERT INTO clientes (nombre, dni) VALUES (?, ?)")) {
             sentencia.setString(1, cliente.getNombre());
             sentencia.setString(2, cliente.getDni());
             sentencia.executeUpdate();
             // El ID se consulta en la misma conexion que hizo el INSERT.
             try (Statement consulta = conexion.createStatement();
-                 ResultSet resultado = consulta.executeQuery("SELECT last_insert_rowid()")) {
-                if (!resultado.next()) throw new SQLException("No se obtuvo el ID generado");
+                    ResultSet resultado = consulta.executeQuery("SELECT last_insert_rowid()")) {
+                if (!resultado.next()) {
+                    throw new SQLException("No se obtuvo el ID generado");
+                }
                 return new Cliente(resultado.getLong(1), cliente.getNombre(), cliente.getDni());
             }
         }
@@ -38,8 +40,8 @@ public final class ClienteDAO {
 
     public Optional<Cliente> buscarPorId(long id) throws SQLException {
         try (Connection conexion = ConexionSQLite.abrir(archivo);
-             PreparedStatement sentencia = conexion.prepareStatement(
-                     "SELECT id, nombre, dni FROM clientes WHERE id = ?")) {
+                PreparedStatement sentencia = conexion.prepareStatement(
+                "SELECT id, nombre, dni FROM clientes WHERE id = ?")) {
             sentencia.setLong(1, id);
             try (ResultSet resultado = sentencia.executeQuery()) {
                 return resultado.next() ? Optional.of(leer(resultado)) : Optional.empty();
@@ -50,10 +52,12 @@ public final class ClienteDAO {
     public List<Cliente> listar() throws SQLException {
         List<Cliente> clientes = new ArrayList<>();
         try (Connection conexion = ConexionSQLite.abrir(archivo);
-             PreparedStatement sentencia = conexion.prepareStatement(
-                     "SELECT id, nombre, dni FROM clientes ORDER BY id");
-             ResultSet resultado = sentencia.executeQuery()) {
-            while (resultado.next()) clientes.add(leer(resultado));
+                PreparedStatement sentencia = conexion.prepareStatement(
+                "SELECT id, nombre, dni FROM clientes ORDER BY id");
+                ResultSet resultado = sentencia.executeQuery()) {
+            while (resultado.next()) {
+                clientes.add(leer(resultado));
+            }
         }
         return clientes;
     }
