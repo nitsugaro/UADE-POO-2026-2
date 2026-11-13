@@ -1,5 +1,6 @@
 package modelo;
 
+import excepciones.DevolucionNoPermitidaException;
 import excepciones.StockInsuficienteException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,7 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 public final class Venta {
-    private final Long id;
+    private Long id;
     private final LocalDateTime fecha;
     private final Empleado empleado;
     private Cliente cliente;
@@ -24,6 +25,24 @@ public final class Venta {
         this.fecha = Objects.requireNonNull(fecha, "Fecha obligatoria");
         this.empleado = Objects.requireNonNull(empleado, "Empleado obligatorio");
         this.cliente = cliente;
+    }
+
+    /** Reconstruye una venta guardada sin ejecutar de nuevo la operación comercial. */
+    public static Venta rehidratar(long id, LocalDateTime fecha, Empleado empleado, Cliente cliente,
+            List<DetalleVenta> detalles, Descuento descuento, Pago pago, EstadoVenta estado) {
+        Venta venta = new Venta(id, fecha, empleado, cliente);
+        venta.detalles.addAll(detalles);
+        venta.descuento = descuento;
+        venta.pago = pago;
+        venta.estado = Objects.requireNonNull(estado);
+        return venta;
+    }
+
+    public void asignarIdPersistido(long id) {
+        if (this.id != null) {
+            throw new IllegalStateException("La venta ya tiene un ID");
+        }
+        this.id = Validaciones.id(id);
     }
 
     private void exigirPreparacion() {
@@ -128,9 +147,15 @@ public final class Venta {
 
     /**
      * Valida y cambia el estado; NO descuenta stock.
-     * El futuro controlador/persistencia debera coordinar estado y stock en una transaccion.
+     * El servicio coordina el estado y el stock en una transacción.
      */
     public void confirmar() {
+        validarConfirmacion(pago);
+        estado = EstadoVenta.CONFIRMADA;
+    }
+
+    /** Valida un pago propuesto sin modificar el carrito ni el estado. */
+    public void validarConfirmacion(Pago pago) {
         exigirPreparacion();
         if (detalles.isEmpty()) {
             throw new IllegalStateException("La venta no tiene detalles");
@@ -156,7 +181,6 @@ public final class Venta {
         if (pago.getImportePagado().compareTo(calcularTotal()) != 0) {
             throw new IllegalStateException("El pago no coincide con el total");
         }
-        estado = EstadoVenta.CONFIRMADA;
     }
 
     /**
@@ -165,10 +189,18 @@ public final class Venta {
      */
     public Devolucion completarDevolucion(Long idDevolucion, LocalDateTime fechaDevolucion, Empleado responsable,
             String motivo, boolean aptosParaReventa) {
-        new PoliticaDevolucion().validar(this, fechaDevolucion, motivo, aptosParaReventa);
+        validarDevolucion(fechaDevolucion, responsable, motivo, aptosParaReventa);
         Devolucion devolucion = new Devolucion(idDevolucion, this, fechaDevolucion, responsable, motivo);
         estado = EstadoVenta.DEVUELTA;
         return devolucion;
+    }
+
+    public void validarDevolucion(LocalDateTime fechaDevolucion, Empleado responsable, String motivo,
+            boolean aptosParaReventa) {
+        new PoliticaDevolucion().validar(this, fechaDevolucion, motivo, aptosParaReventa);
+        if (responsable == null || !responsable.isActivo()) {
+            throw new DevolucionNoPermitidaException("Se requiere un empleado responsable activo");
+        }
     }
 
     public Long getId() {

@@ -1,42 +1,44 @@
 package controlador;
 
-import modelo.Empleado;
+import modelo.Cliente;
+import vista.FormularioPanel;
 import vista.InicioVista;
+
+import javax.swing.JOptionPane;
+import javax.swing.JTextField;
 
 public final class InicioControlador {
     private final Navegacion navegacion;
     private final InicioVista vista = new InicioVista();
 
-    public InicioControlador(Navegacion navegacion, Empleado seleccionado) {
+    public InicioControlador(Navegacion navegacion) {
         this.navegacion = navegacion;
-
-        for (Empleado empleado : navegacion.servicio.empleados()) {
-            vista.empleados.addItem(empleado.getLegajo() + " · " + empleado.getNombre());
-        }
-        if (seleccionado != null) {
-            vista.empleados.setSelectedIndex(navegacion.servicio.empleados().indexOf(seleccionado));
-        }
-
-        vista.venta.addActionListener(evento -> iniciarVenta());
+        vista.venta.addActionListener(evento -> navegacion.nuevaVenta());
         vista.historial.addActionListener(evento -> navegacion.mostrarHistorial());
         vista.catalogo.addActionListener(evento -> navegacion.mostrarCatalogo());
+        vista.prestamos.addActionListener(evento -> new PrestamoControlador(navegacion).mostrar());
+        vista.socio.addActionListener(evento -> asociar());
     }
 
     public void mostrar() {
         navegacion.ventana.mostrar(vista, true);
     }
 
-    private void iniciarVenta() {
-        try {
-            int indice = vista.empleados.getSelectedIndex();
-            if (indice < 0) {
-                throw new IllegalArgumentException("Seleccioná un empleado");
+    private void asociar() {
+        JTextField nombre = new JTextField(24);
+        JTextField dni = new JTextField(12);
+        FormularioPanel formulario = new FormularioPanel();
+        formulario.agregarCampo("DNI", dni);
+        formulario.agregarCampo("Nombre y apellido (si todavía no sos cliente)", nombre);
+        while (JOptionPane.showConfirmDialog(navegacion.ventana, formulario, "Hacerse socio",
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+            try {
+                Cliente socio = navegacion.servicio.asociar(nombre.getText(), dni.getText());
+                navegacion.ventana.informar("Socio registrado: " + socio.getNombre());
+                return;
+            } catch (IllegalArgumentException | IllegalStateException error) {
+                navegacion.ventana.error(error);
             }
-            Empleado empleado = navegacion.servicio.empleados().get(indice);
-            navegacion.seleccionarEmpleado(empleado);
-            navegacion.nuevaVenta();
-        } catch (IllegalArgumentException error) {
-            navegacion.ventana.error(error);
         }
     }
 }

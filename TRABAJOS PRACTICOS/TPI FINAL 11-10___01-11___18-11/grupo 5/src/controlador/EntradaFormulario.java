@@ -1,9 +1,14 @@
 package controlador;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import javax.swing.JTable;
 
 final class EntradaFormulario {
+    private static final Pattern DIACRITICOS = Pattern.compile("\\p{M}+");
+
     private EntradaFormulario() {
     }
 
@@ -13,6 +18,11 @@ final class EntradaFormulario {
         } catch (NumberFormatException error) {
             throw new IllegalArgumentException("Ingresá un importe numérico válido");
         }
+    }
+
+    static String normalizarBusqueda(String texto) {
+        return DIACRITICOS.matcher(Normalizer.normalize(texto.trim(), Normalizer.Form.NFD))
+                .replaceAll("").toLowerCase(Locale.ROOT);
     }
 
     static int seleccionado(JTable tabla) {

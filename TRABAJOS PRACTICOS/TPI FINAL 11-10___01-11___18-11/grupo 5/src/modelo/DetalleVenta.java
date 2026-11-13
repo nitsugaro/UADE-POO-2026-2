@@ -3,7 +3,7 @@ package modelo;
 import java.math.BigDecimal;
 import java.util.Objects;
 
-/** Inmutable: solo Venta crea detalles y reemplaza cantidades. */
+/** Línea inmutable con el precio y los datos históricos del libro. */
 public final class DetalleVenta {
     private final Libro libro;
     private final int cantidad;
@@ -16,8 +16,9 @@ public final class DetalleVenta {
                 libro.getTitulo(), libro.getIsbn());
     }
 
-    private DetalleVenta(Libro libro, int cantidad, BigDecimal precio, String titulo, String isbn) {
-        this.libro = libro;
+    /** Permite conservar el precio y los datos del libro al momento de venderlo. */
+    public DetalleVenta(Libro libro, int cantidad, BigDecimal precio, String titulo, String isbn) {
+        this.libro = Objects.requireNonNull(libro, "Libro obligatorio");
         this.cantidad = Validaciones.cantidad(cantidad);
         this.precioUnitario = Validaciones.precio(precio);
         this.titulo = titulo;

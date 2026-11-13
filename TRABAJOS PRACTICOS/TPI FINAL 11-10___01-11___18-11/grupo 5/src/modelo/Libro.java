@@ -9,11 +9,11 @@ import java.util.Objects;
 
 public final class Libro {
     private final Long id;
-    private final String isbn;
-    private final String titulo;
-    private final List<Autor> autores;
-    private final Editorial editorial;
-    private final Categoria categoria;
+    private String isbn;
+    private String titulo;
+    private List<Autor> autores;
+    private Editorial editorial;
+    private Categoria categoria;
     private BigDecimal precioVenta;
     private int stock;
     private boolean activo;
@@ -24,7 +24,7 @@ public final class Libro {
         this.isbn = Validaciones.texto(isbn, "ISBN");
         this.titulo = Validaciones.texto(titulo, "Titulo");
         Objects.requireNonNull(autores, "Autores obligatorios");
-        if (autores.isEmpty() || autores.contains(null)) {
+        if (autores.isEmpty() || autores.stream().anyMatch(Objects::isNull)) {
             throw new IllegalArgumentException("Se requiere al menos un autor y ninguno nulo");
         }
         this.autores = new ArrayList<>(autores);
@@ -36,6 +36,20 @@ public final class Libro {
         }
         this.stock = stock;
         this.activo = activo;
+    }
+
+    public void actualizarDesde(Libro actualizado) {
+        if (!Objects.equals(id, actualizado.id)) {
+            throw new IllegalArgumentException("Los datos corresponden a otro libro");
+        }
+        isbn = actualizado.isbn;
+        titulo = actualizado.titulo;
+        autores = new ArrayList<>(actualizado.autores);
+        editorial = actualizado.editorial;
+        categoria = actualizado.categoria;
+        precioVenta = actualizado.precioVenta;
+        stock = actualizado.stock;
+        activo = actualizado.activo;
     }
 
     public boolean hayDisponibilidad(int cantidad) {

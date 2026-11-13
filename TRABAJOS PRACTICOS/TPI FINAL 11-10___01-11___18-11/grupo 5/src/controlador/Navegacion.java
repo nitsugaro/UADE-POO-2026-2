@@ -1,6 +1,5 @@
 package controlador;
 
-import modelo.Empleado;
 import modelo.Venta;
 import servicio.LibreriaServicio;
 import vista.VentanaPrincipal;
@@ -8,7 +7,6 @@ import vista.VentanaPrincipal;
 public final class Navegacion {
     final VentanaPrincipal ventana;
     final LibreriaServicio servicio;
-    private Empleado empleado;
 
     public Navegacion(VentanaPrincipal ventana, LibreriaServicio servicio) {
         this.ventana = ventana;
@@ -16,7 +14,7 @@ public final class Navegacion {
     }
 
     public void mostrarInicio() {
-        new InicioControlador(this, empleado).mostrar();
+        new InicioControlador(this).mostrar();
     }
 
     void mostrarHistorial() {
@@ -35,24 +33,20 @@ public final class Navegacion {
         new DevolucionControlador(this, venta).mostrar();
     }
 
-    void mostrarClientes(Venta venta, Runnable volver) {
-        new ClienteControlador(this, venta, volver).mostrar();
+    void mostrarClientes(Venta venta, Runnable volver, boolean nuevo) {
+        new ClienteControlador(this, venta, volver).mostrar(nuevo);
     }
 
     void mostrarPago(Venta venta, Runnable volver) {
         new PagoControlador(this, venta, volver).mostrar();
     }
 
-    void seleccionarEmpleado(Empleado empleado) {
-        this.empleado = empleado;
-    }
-
     void nuevaVenta() {
-        if (empleado == null) {
-            mostrarInicio();
-            return;
+        try {
+            Venta venta = servicio.nuevaVenta(servicio.empleadoPredeterminado());
+            new VentaControlador(this, venta).mostrar();
+        } catch (IllegalArgumentException | IllegalStateException error) {
+            ventana.error(error);
         }
-        Venta venta = servicio.nuevaVenta(empleado);
-        new VentaControlador(this, venta).mostrar();
     }
 }

@@ -11,7 +11,7 @@ public final class HistorialVentasVista extends PanelVista {
     public final JButton volver = new JButton("Inicio");
 
     public HistorialVentasVista() {
-        super("Historial de esta sesión");
+        super("Historial de ventas");
         configurar(ventas);
 
         JPanel contenido = new JPanel(new BorderLayout(0, 8));

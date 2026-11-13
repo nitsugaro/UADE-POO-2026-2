@@ -11,7 +11,7 @@ public final class PruebasVistas {
             PanelVista[] vistas = {
                 new InicioVista(), new ClienteVista(), new PagoVista(),
                 new DevolucionVista(), new VentaVista(), new CatalogoVista(),
-                new HistorialVentasVista(), new ResumenVentaVista()
+                new HistorialVentasVista(), new ResumenVentaVista(), new PrestamoVista()
             };
 
             for (PanelVista vista : vistas) {
@@ -30,15 +30,25 @@ public final class PruebasVistas {
                     pago.mostrarMedioSeleccionado();
                     comprobar(vista, base);
                 }
+                if (vista instanceof PrestamoVista prestamo) {
+                    prestamo.opciones.setSelectedIndex(1);
+                    comprobar(vista, base);
+                }
             }
-            System.out.println("OK: 8 vistas en tamaño inicial y ampliado; pestañas de cliente y pago");
+            LibroFormulario libro = new LibroFormulario();
+            comprobar(libro, libro.getPreferredSize());
+            System.out.println("OK: 9 vistas en tamaño inicial y ampliado; pestañas y formulario de libros");
         });
     }
 
-    private static void comprobar(PanelVista vista, Dimension tamano) {
+    private static void comprobar(JPanel vista, Dimension tamano) {
         vista.setSize(tamano);
         distribuir(vista);
         validarCampos(vista);
+        if (vista instanceof VentaVista venta
+                && venta.catalogo.getParent().getHeight() <= venta.carrito.getParent().getHeight()) {
+            throw new AssertionError("El catálogo debe tener más espacio visible que el carrito");
+        }
     }
 
     private static void distribuir(Container contenedor) {

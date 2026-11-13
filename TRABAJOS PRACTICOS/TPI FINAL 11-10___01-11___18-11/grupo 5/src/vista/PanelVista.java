@@ -9,9 +9,13 @@ public class PanelVista extends JPanel {
     protected final JPanel acciones = barra();
 
     public PanelVista(String titulo) {
+        this(titulo, null);
+    }
+
+    protected PanelVista(String titulo, Icon icono) {
         super(new BorderLayout(12, 12));
         setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        JLabel encabezado = new JLabel(titulo);
+        JLabel encabezado = new JLabel(titulo, icono, SwingConstants.LEADING);
         encabezado.setFont(encabezado.getFont().deriveFont(Font.BOLD, 22f));
         add(encabezado, BorderLayout.NORTH);
         add(acciones, BorderLayout.SOUTH);

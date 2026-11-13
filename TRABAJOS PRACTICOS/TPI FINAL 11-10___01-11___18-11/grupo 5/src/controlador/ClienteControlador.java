@@ -8,7 +8,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public final class ClienteControlador {
     private final Navegacion navegacion;
@@ -41,6 +40,13 @@ public final class ClienteControlador {
                 filtrarClientes();
             }
         });
+        vista.opciones.addChangeListener(evento -> enfocarCampoInicial());
+        vista.buscar.addActionListener(evento -> {
+            if (visibles.size() == 1) {
+                vista.clientes.setSelectedIndex(0);
+            }
+            seleccionarCliente();
+        });
         vista.clientes.addListSelectionListener(evento -> actualizarSeleccion());
         vista.seleccionar.addActionListener(evento -> seleccionarCliente());
         vista.crear.addActionListener(evento -> crearCliente());
@@ -49,9 +55,9 @@ public final class ClienteControlador {
         vista.dni.addActionListener(evento -> crearCliente());
     }
 
-    public void mostrar() {
+    public void mostrar(boolean nuevo) {
         filtrarClientes();
-        if (navegacion.servicio.clientes().isEmpty()) {
+        if (nuevo || navegacion.servicio.clientes().isEmpty()) {
             vista.opciones.setSelectedIndex(1);
         } else if (venta.getCliente() != null) {
             vista.clientes.setSelectedIndex(visibles.indexOf(venta.getCliente()));
@@ -69,13 +75,13 @@ public final class ClienteControlador {
     }
 
     private void filtrarClientes() {
-        String filtro = vista.buscar.getText().trim().toLowerCase(Locale.ROOT);
+        String filtro = EntradaFormulario.normalizarBusqueda(vista.buscar.getText());
         List<Cliente> clientes = navegacion.servicio.clientes();
         visibles.clear();
         vista.resultados.clear();
 
         for (Cliente cliente : clientes) {
-            boolean coincideNombre = cliente.getNombre().toLowerCase(Locale.ROOT).contains(filtro);
+            boolean coincideNombre = EntradaFormulario.normalizarBusqueda(cliente.getNombre()).contains(filtro);
             boolean coincideDni = cliente.getDni().contains(filtro);
             if (coincideNombre || coincideDni) {
                 visibles.add(cliente);
@@ -84,11 +90,11 @@ public final class ClienteControlador {
         }
 
         if (clientes.isEmpty()) {
-            vista.estadoBusqueda.setText("Todavía no hay clientes. Registrá el primero en Crear cliente.");
+            vista.estadoBusqueda.setText("Todavía no hay clientes. Registrá el primero en Nuevo cliente.");
         } else if (visibles.isEmpty()) {
-            vista.estadoBusqueda.setText("No hay coincidencias. Probá otro nombre o DNI.");
+            vista.estadoBusqueda.setText("No hay coincidencias. Probá otro nombre, apellido o DNI.");
         } else {
-            vista.estadoBusqueda.setText("Seleccioná el cliente que querés agregar a la venta.");
+            vista.estadoBusqueda.setText("Elegí un cliente de la lista.");
         }
         actualizarSeleccion();
     }
@@ -123,7 +129,7 @@ public final class ClienteControlador {
         try {
             Cliente cliente = navegacion.servicio.crearCliente(nombre, dni);
             asignarCliente(cliente);
-        } catch (IllegalArgumentException error) {
+        } catch (IllegalArgumentException | IllegalStateException error) {
             vista.error.setText(error.getMessage());
         }
     }

@@ -8,8 +8,8 @@ public final class Descuento {
     private final BigDecimal porcentaje;
 
     private Descuento(String codigo, BigDecimal porcentaje) {
-        this.codigo = codigo;
-        this.porcentaje = porcentaje;
+        this.codigo = Validaciones.texto(codigo, "Codigo");
+        this.porcentaje = Validaciones.dinero(porcentaje);
     }
 
     public static Descuento desdeCodigo(String codigo) {
@@ -17,6 +17,10 @@ public final class Descuento {
             throw new IllegalArgumentException("Codigo de descuento invalido");
         }
         return new Descuento("HOTSALE", new BigDecimal("10.00"));
+    }
+
+    public static Descuento rehidratar(String codigo, BigDecimal porcentaje) {
+        return new Descuento(codigo, porcentaje);
     }
 
     public BigDecimal calcularImporte(BigDecimal subtotal) {

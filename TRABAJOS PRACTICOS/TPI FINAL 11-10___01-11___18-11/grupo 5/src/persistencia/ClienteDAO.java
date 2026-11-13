@@ -50,9 +50,14 @@ public final class ClienteDAO {
     }
 
     public List<Cliente> listar() throws SQLException {
+        try (Connection conexion = ConexionSQLite.abrir(archivo)) {
+            return listar(conexion);
+        }
+    }
+
+    static List<Cliente> listar(Connection conexion) throws SQLException {
         List<Cliente> clientes = new ArrayList<>();
-        try (Connection conexion = ConexionSQLite.abrir(archivo);
-                PreparedStatement sentencia = conexion.prepareStatement(
+        try (PreparedStatement sentencia = conexion.prepareStatement(
                 "SELECT id, nombre, dni FROM clientes ORDER BY id");
                 ResultSet resultado = sentencia.executeQuery()) {
             while (resultado.next()) {
@@ -62,7 +67,7 @@ public final class ClienteDAO {
         return clientes;
     }
 
-    private Cliente leer(ResultSet resultado) throws SQLException {
+    private static Cliente leer(ResultSet resultado) throws SQLException {
         return new Cliente(resultado.getLong("id"), resultado.getString("nombre"),
                 resultado.getString("dni"));
     }

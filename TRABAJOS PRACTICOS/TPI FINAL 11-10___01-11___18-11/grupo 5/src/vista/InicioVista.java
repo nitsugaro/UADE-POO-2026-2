@@ -4,20 +4,23 @@ import javax.swing.*;
 import java.awt.*;
 
 public final class InicioVista extends PanelVista {
-    public final JComboBox<String> empleados = new JComboBox<>();
     public final JButton venta = new JButton("Nueva venta");
     public final JButton historial = new JButton("Historial de ventas");
-    public final JButton catalogo = new JButton("Catálogo");
+    public final JButton catalogo = new JButton("Administrar libros");
+    public final JButton socio = new JButton("Hacerse socio");
+    public final JButton prestamos = new JButton("Préstamos y devoluciones");
 
     public InicioVista() {
-        super("Librería · Inicio");
+        super("Librería · Inicio", new ImageIcon(IconoLibro.crear(32)));
 
-        FormularioPanel formulario = new FormularioPanel();
-        formulario.agregarCampo("Empleado responsable", empleados);
-        formulario.agregar(barra(venta, historial, catalogo));
-        formulario.agregar(new JLabel("<html>Sesión de demostración.<br>Los datos se pierden al cerrar.</html>"));
+        JPanel accesos = new JPanel(new GridLayout(0, 1, 0, 12));
+        accesos.add(seccion("Ventas", barra(venta, historial)));
+        accesos.add(seccion("Catálogo", barra(catalogo)));
+        accesos.add(seccion("Socios y préstamos", barra(socio, prestamos)));
+        JPanel contenido = new JPanel(new BorderLayout());
+        contenido.add(accesos, BorderLayout.NORTH);
         remove(acciones);
-        add(formulario.alineadoArriba(), BorderLayout.CENTER);
-        configurarTamano(580, 240);
+        add(contenido, BorderLayout.CENTER);
+        configurarTamano(580, 300);
     }
 }
