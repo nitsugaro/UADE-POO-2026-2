@@ -25,6 +25,14 @@ public final class Navegacion {
         new CatalogoControlador(this).mostrar();
     }
 
+    void mostrarCategorias() {
+        new CategoriaControlador(this).mostrar();
+    }
+
+    void mostrarEditoriales() {
+        new EditorialControlador(this).mostrar();
+    }
+
     void mostrarDetalle(Venta venta) {
         new HistorialVentasControlador(this).mostrarDetalle(venta);
     }

@@ -47,6 +47,86 @@ public final class LibreriaServicio {
         return List.copyOf(libros);
     }
 
+    public List<Categoria> categorias() {
+        try {
+            return datos.listarCategorias();
+        } catch (SQLException error) {
+            throw new IllegalStateException("No se pudieron consultar las categorías.", error);
+        }
+    }
+
+    public Categoria guardarCategoria(Categoria anterior, String nombre) {
+        try {
+            Categoria guardada = datos.guardarCategoria(anterior, nombre);
+            // Cada libro cargado puede tener una instancia distinta de la misma categoría.
+            for (Libro libro : libros) {
+                if (guardada.getId().equals(libro.getCategoria().getId())) {
+                    libro.getCategoria().cambiarNombre(guardada.getNombre());
+                }
+            }
+            if (anterior != null) anterior.cambiarNombre(guardada.getNombre());
+            return guardada;
+        } catch (SQLException error) {
+            throw errorAlGuardar(error);
+        }
+    }
+
+    public void validarBajaCategoria(Categoria categoria) {
+        try {
+            datos.validarBajaCategoria(categoria);
+        } catch (SQLException error) {
+            throw errorAlGuardar(error);
+        }
+    }
+
+    public void eliminarCategoria(Categoria categoria) {
+        try {
+            datos.eliminarCategoria(categoria);
+        } catch (SQLException error) {
+            throw errorAlGuardar(error);
+        }
+    }
+
+    public List<Editorial> editoriales() {
+        try {
+            return datos.listarEditoriales();
+        } catch (SQLException error) {
+            throw new IllegalStateException("No se pudieron consultar las editoriales.", error);
+        }
+    }
+
+    public Editorial guardarEditorial(Editorial anterior, String nombre) {
+        try {
+            Editorial guardada = datos.guardarEditorial(anterior, nombre);
+            // Cada libro cargado puede tener una instancia distinta de la misma editorial.
+            for (Libro libro : libros) {
+                if (guardada.getId().equals(libro.getEditorial().getId())) {
+                    libro.getEditorial().cambiarNombre(guardada.getNombre());
+                }
+            }
+            if (anterior != null) anterior.cambiarNombre(guardada.getNombre());
+            return guardada;
+        } catch (SQLException error) {
+            throw errorAlGuardar(error);
+        }
+    }
+
+    public void validarBajaEditorial(Editorial editorial) {
+        try {
+            datos.validarBajaEditorial(editorial);
+        } catch (SQLException error) {
+            throw errorAlGuardar(error);
+        }
+    }
+
+    public void eliminarEditorial(Editorial editorial) {
+        try {
+            datos.eliminarEditorial(editorial);
+        } catch (SQLException error) {
+            throw errorAlGuardar(error);
+        }
+    }
+
     public List<Cliente> clientes() {
         return List.copyOf(clientes);
     }

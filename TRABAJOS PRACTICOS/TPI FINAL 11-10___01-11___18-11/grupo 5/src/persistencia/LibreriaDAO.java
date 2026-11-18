@@ -149,6 +149,136 @@ public final class LibreriaDAO {
         return insertar(conexion, "INSERT INTO " + tabla + " (nombre) VALUES (?) RETURNING id", nombre);
     }
 
+    public List<Categoria> listarCategorias() throws SQLException {
+        List<Categoria> categorias = new ArrayList<>();
+        try (Connection conexion = ConexionSQLite.abrir(archivo);
+                Statement consulta = conexion.createStatement();
+                ResultSet filas = consulta.executeQuery("SELECT id, nombre FROM categorias ORDER BY nombre, id")) {
+            while (filas.next()) {
+                categorias.add(new Categoria(filas.getLong("id"), filas.getString("nombre")));
+            }
+        }
+        return categorias;
+    }
+
+    public Categoria guardarCategoria(Categoria anterior, String nombre) throws SQLException {
+        Categoria nueva = new Categoria(anterior == null ? null : anterior.getId(), nombre);
+        return ConexionSQLite.transaccion(archivo, conexion -> {
+            // Mismo bloqueo y comparación exacta de nombres que guardarLibro/buscarOCrear.
+            ejecutar(conexion, "UPDATE categorias SET id = id WHERE 0");
+            try (PreparedStatement consulta = conexion.prepareStatement(
+                    "SELECT id FROM categorias WHERE nombre = ? AND (? IS NULL OR id <> ?)")) {
+                consulta.setString(1, nueva.getNombre());
+                consulta.setObject(2, nueva.getId());
+                consulta.setObject(3, nueva.getId());
+                try (ResultSet filas = consulta.executeQuery()) {
+                    if (filas.next()) throw new IllegalArgumentException("Ya existe una categoría con ese nombre");
+                }
+            }
+            long id;
+            if (anterior == null) {
+                id = insertar(conexion, "INSERT INTO categorias (nombre) VALUES (?) RETURNING id", nueva.getNombre());
+            } else {
+                id = anterior.getId();
+                exigirActualizacion(ejecutar(conexion,
+                        "UPDATE categorias SET nombre = ? WHERE id = ? AND nombre = ?",
+                        nueva.getNombre(), id, anterior.getNombre()));
+            }
+            return new Categoria(id, nueva.getNombre());
+        });
+    }
+
+    private static void exigirCategoriaSinLibros(Connection conexion, long id) throws SQLException {
+        try (PreparedStatement consulta = conexion.prepareStatement("SELECT 1 FROM libros WHERE categoria_id = ? LIMIT 1")) {
+            consulta.setLong(1, id);
+            try (ResultSet filas = consulta.executeQuery()) {
+                if (filas.next()) throw new IllegalStateException(
+                        "Esta categoría está asignada a uno o más libros. Reasignalos antes de eliminarla");
+            }
+        }
+    }
+
+    public void validarBajaCategoria(Categoria categoria) throws SQLException {
+        try (Connection conexion = ConexionSQLite.abrir(archivo)) {
+            exigirCategoriaSinLibros(conexion, categoria.getId());
+        }
+    }
+
+    public void eliminarCategoria(Categoria categoria) throws SQLException {
+        ConexionSQLite.transaccion(archivo, conexion -> {
+            ejecutar(conexion, "UPDATE categorias SET id = id WHERE 0");
+            exigirCategoriaSinLibros(conexion, categoria.getId());
+            exigirActualizacion(ejecutar(conexion, "DELETE FROM categorias WHERE id = ? AND nombre = ?",
+                    categoria.getId(), categoria.getNombre()));
+            return null;
+        });
+    }
+
+    public List<Editorial> listarEditoriales() throws SQLException {
+        List<Editorial> editoriales = new ArrayList<>();
+        try (Connection conexion = ConexionSQLite.abrir(archivo);
+                Statement consulta = conexion.createStatement();
+                ResultSet filas = consulta.executeQuery("SELECT id, nombre FROM editoriales ORDER BY nombre, id")) {
+            while (filas.next()) {
+                editoriales.add(new Editorial(filas.getLong("id"), filas.getString("nombre")));
+            }
+        }
+        return editoriales;
+    }
+
+    public Editorial guardarEditorial(Editorial anterior, String nombre) throws SQLException {
+        Editorial nueva = new Editorial(anterior == null ? null : anterior.getId(), nombre);
+        return ConexionSQLite.transaccion(archivo, conexion -> {
+            // Mismo bloqueo y comparación exacta de nombres que guardarLibro/buscarOCrear.
+            ejecutar(conexion, "UPDATE editoriales SET id = id WHERE 0");
+            try (PreparedStatement consulta = conexion.prepareStatement(
+                    "SELECT id FROM editoriales WHERE nombre = ? AND (? IS NULL OR id <> ?)")) {
+                consulta.setString(1, nueva.getNombre());
+                consulta.setObject(2, nueva.getId());
+                consulta.setObject(3, nueva.getId());
+                try (ResultSet filas = consulta.executeQuery()) {
+                    if (filas.next()) throw new IllegalArgumentException("Ya existe una editorial con ese nombre");
+                }
+            }
+            long id;
+            if (anterior == null) {
+                id = insertar(conexion, "INSERT INTO editoriales (nombre) VALUES (?) RETURNING id", nueva.getNombre());
+            } else {
+                id = anterior.getId();
+                exigirActualizacion(ejecutar(conexion,
+                        "UPDATE editoriales SET nombre = ? WHERE id = ? AND nombre = ?",
+                        nueva.getNombre(), id, anterior.getNombre()));
+            }
+            return new Editorial(id, nueva.getNombre());
+        });
+    }
+
+    private static void exigirEditorialSinLibros(Connection conexion, long id) throws SQLException {
+        try (PreparedStatement consulta = conexion.prepareStatement("SELECT 1 FROM libros WHERE editorial_id = ? LIMIT 1")) {
+            consulta.setLong(1, id);
+            try (ResultSet filas = consulta.executeQuery()) {
+                if (filas.next()) throw new IllegalStateException(
+                        "Esta editorial está asignada a uno o más libros. Reasignalos antes de eliminarla");
+            }
+        }
+    }
+
+    public void validarBajaEditorial(Editorial editorial) throws SQLException {
+        try (Connection conexion = ConexionSQLite.abrir(archivo)) {
+            exigirEditorialSinLibros(conexion, editorial.getId());
+        }
+    }
+
+    public void eliminarEditorial(Editorial editorial) throws SQLException {
+        ConexionSQLite.transaccion(archivo, conexion -> {
+            ejecutar(conexion, "UPDATE editoriales SET id = id WHERE 0");
+            exigirEditorialSinLibros(conexion, editorial.getId());
+            exigirActualizacion(ejecutar(conexion, "DELETE FROM editoriales WHERE id = ? AND nombre = ?",
+                    editorial.getId(), editorial.getNombre()));
+            return null;
+        });
+    }
+
     private List<Empleado> listarEmpleados(Connection conexion) throws SQLException {
         List<Empleado> empleados = new ArrayList<>();
         try (Statement consulta = conexion.createStatement();

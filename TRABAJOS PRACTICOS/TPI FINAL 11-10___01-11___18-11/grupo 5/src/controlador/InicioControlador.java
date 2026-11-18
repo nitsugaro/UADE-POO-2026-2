@@ -16,6 +16,8 @@ public final class InicioControlador {
         vista.venta.addActionListener(evento -> navegacion.nuevaVenta());
         vista.historial.addActionListener(evento -> navegacion.mostrarHistorial());
         vista.catalogo.addActionListener(evento -> navegacion.mostrarCatalogo());
+        vista.categorias.addActionListener(evento -> navegacion.mostrarCategorias());
+        vista.editoriales.addActionListener(evento -> navegacion.mostrarEditoriales());
         vista.prestamos.addActionListener(evento -> new PrestamoControlador(navegacion).mostrar());
         vista.socio.addActionListener(evento -> asociar());
     }
