@@ -33,6 +33,10 @@ public final class Navegacion {
         new EditorialControlador(this).mostrar();
     }
 
+    void mostrarAdministracionClientes() {
+        new AdministrarClientesControlador(this).mostrar();
+    }
+
     void mostrarDetalle(Venta venta) {
         new HistorialVentasControlador(this).mostrarDetalle(venta);
     }

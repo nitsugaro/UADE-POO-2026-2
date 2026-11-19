@@ -380,43 +380,35 @@ public final class LibreriaDAO {
     }
 
     public Cliente asociar(String nombre, String dni) throws SQLException {
+        String documento = new Cliente(null, "Validación DNI", dni).getDni();
         return ConexionSQLite.transaccion(archivo, conexion -> {
-            // La primera escritura serializa dos altas concurrentes para el mismo DNI.
-            int filas = ejecutar(conexion, """
-                    INSERT INTO socios (cliente_id)
-                    SELECT id FROM clientes WHERE dni = ? ORDER BY id LIMIT 1
-                    ON CONFLICT (cliente_id) DO NOTHING
-                    """, dni);
-            try (PreparedStatement consulta = conexion.prepareStatement(
-                    "SELECT id, nombre FROM clientes WHERE dni = ? ORDER BY id LIMIT 1")) {
-                consulta.setString(1, dni);
-                try (ResultSet fila = consulta.executeQuery()) {
-                    if (fila.next()) {
-                        if (filas == 0) {
-                            throw new IllegalArgumentException("Ese DNI ya está registrado como socio");
-                        }
-                        return new Cliente(fila.getLong("id"), fila.getString("nombre"), dni);
-                    }
-                }
+            ClienteDAO.bloquearAltas(conexion);
+            List<Cliente> coincidencias = ClienteDAO.buscarPorDni(conexion, documento);
+            if (coincidencias.size() > 1) throw new IllegalArgumentException(
+                    "Ese DNI corresponde a varias fichas históricas. Corregí la ambigüedad desde Administrar clientes antes de asociar.");
+            Cliente cliente;
+            if (coincidencias.isEmpty()) {
+                cliente = ClienteDAO.insertarNuevo(conexion, new Cliente(null, nombre, documento));
+            } else {
+                cliente = coincidencias.get(0);
+                if (!cliente.isActivo()) throw new IllegalStateException(
+                        "El cliente está inactivo. Reactivalo desde Administrar clientes.");
             }
-            Cliente nuevo = new Cliente(null, nombre, dni);
-            long id = insertar(conexion, "INSERT INTO clientes (nombre, dni) VALUES (?, ?) RETURNING id",
-                    nuevo.getNombre(), nuevo.getDni());
-            ejecutar(conexion, "INSERT INTO socios (cliente_id) VALUES (?)", id);
-            return new Cliente(id, nuevo.getNombre(), nuevo.getDni());
+            int filas = ejecutar(conexion, "INSERT INTO socios (cliente_id) VALUES (?) ON CONFLICT (cliente_id) DO NOTHING", cliente.getId());
+            if (filas == 0) throw new IllegalArgumentException("Ese DNI ya está registrado como socio");
+            return cliente;
         });
     }
-
     public List<Cliente> listarSocios() throws SQLException {
         List<Cliente> socios = new ArrayList<>();
         try (Connection conexion = ConexionSQLite.abrir(archivo);
                 Statement consulta = conexion.createStatement();
                 ResultSet filas = consulta.executeQuery("""
-                    SELECT c.id, c.nombre, c.dni FROM socios s JOIN clientes c ON c.id = s.cliente_id
+                    SELECT c.id, c.nombre, c.dni, c.activo FROM socios s JOIN clientes c ON c.id = s.cliente_id
                     ORDER BY c.nombre, c.id
                     """)) {
             while (filas.next()) {
-                socios.add(new Cliente(filas.getLong("id"), filas.getString("nombre"), filas.getString("dni")));
+                socios.add(new Cliente(filas.getLong("id"), filas.getString("nombre"), filas.getString("dni"), filas.getBoolean("activo")));
             }
         }
         return socios;
@@ -427,10 +419,10 @@ public final class LibreriaDAO {
             int filas = ejecutar(conexion, """
                     INSERT INTO prestamos (socio_id, libro_id, fecha)
                     SELECT s.cliente_id, ?, ? FROM socios s JOIN clientes c ON c.id = s.cliente_id
-                    WHERE c.dni = ? ORDER BY s.cliente_id LIMIT 1
+                    WHERE c.dni = ? AND c.activo = 1 ORDER BY s.cliente_id LIMIT 1
                     """, libro.getId(), LocalDateTime.now().toString(), dni);
             if (filas == 0) {
-                throw new IllegalArgumentException("Registrá al socio antes de hacer un préstamo");
+                throw new IllegalArgumentException("El cliente debe ser socio y estar activo para iniciar un préstamo");
             }
             retirarStock(conexion, libro, 1);
             return null;
@@ -545,6 +537,16 @@ public final class LibreriaDAO {
         return ConexionSQLite.transaccion(archivo, conexion -> {
             Descuento descuento = venta.getDescuento();
             Cliente cliente = venta.getCliente();
+            if (estado == EstadoVenta.CONFIRMADA && cliente != null) {
+                ejecutar(conexion, "UPDATE clientes SET id = id WHERE 0");
+                try (PreparedStatement consulta = conexion.prepareStatement("SELECT activo FROM clientes WHERE id = ?")) {
+                    consulta.setObject(1, cliente.getId());
+                    try (ResultSet fila = consulta.executeQuery()) {
+                        if (!fila.next() || !fila.getBoolean("activo")) throw new IllegalStateException(
+                                "El cliente está inactivo. Seleccioná otro cliente o quitá el cliente para pagar en efectivo.");
+                    }
+                }
+            }
             long id = insertar(conexion, """
                     INSERT INTO ventas (fecha, empleado_id, cliente_id, estado, descuento_codigo, descuento_porcentaje)
                     VALUES (?, ?, ?, ?, ?, ?) RETURNING id

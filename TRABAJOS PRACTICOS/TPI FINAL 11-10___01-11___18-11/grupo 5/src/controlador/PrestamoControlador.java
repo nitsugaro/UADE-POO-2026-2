@@ -84,7 +84,7 @@ final class PrestamoControlador {
 
     void mostrar() {
         try {
-            socios = navegacion.servicio.socios();
+            socios = navegacion.servicio.socios().stream().filter(Cliente::isActivo).toList();
             for (Cliente socio : socios) {
                 vista.padron.addRow(new Object[]{socio.getNombre(), socio.getDni()});
             }

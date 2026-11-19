@@ -81,6 +81,7 @@ public final class ClienteControlador {
         vista.resultados.clear();
 
         for (Cliente cliente : clientes) {
+            if (!cliente.isActivo()) continue;
             boolean coincideNombre = EntradaFormulario.normalizarBusqueda(cliente.getNombre()).contains(filtro);
             boolean coincideDni = cliente.getDni().contains(filtro);
             if (coincideNombre || coincideDni) {

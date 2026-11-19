@@ -9,6 +9,7 @@ public final class InicioVista extends PanelVista {
     public final JButton catalogo = new JButton("Administrar libros");
     public final JButton categorias = new JButton("Administrar categorías");
     public final JButton editoriales = new JButton("Administrar editoriales");
+    public final JButton clientes = new JButton("Administrar clientes");
     public final JButton socio = new JButton("Hacerse socio");
     public final JButton prestamos = new JButton("Préstamos y devoluciones");
 
@@ -18,7 +19,7 @@ public final class InicioVista extends PanelVista {
         JPanel accesos = new JPanel(new GridLayout(0, 1, 0, 12));
         accesos.add(seccion("Ventas", barra(venta, historial)));
         accesos.add(seccion("Catálogo", barra(catalogo, categorias)));
-        accesos.add(barra(editoriales));
+        accesos.add(barra(editoriales, clientes));
         accesos.add(seccion("Socios y préstamos", barra(socio, prestamos)));
         JPanel contenido = new JPanel(new BorderLayout());
         contenido.add(accesos, BorderLayout.NORTH);

@@ -157,6 +157,9 @@ public final class Venta {
     /** Valida un pago propuesto sin modificar el carrito ni el estado. */
     public void validarConfirmacion(Pago pago) {
         exigirPreparacion();
+        if (cliente != null && !cliente.isActivo()) {
+            throw new IllegalStateException("El cliente está inactivo. Seleccioná otro cliente o quitá el cliente para pagar en efectivo.");
+        }
         if (detalles.isEmpty()) {
             throw new IllegalStateException("La venta no tiene detalles");
         }

@@ -71,6 +71,14 @@ public final class ConexionSQLite {
                 for (String sql : ESQUEMA) {
                     sentencia.executeUpdate(sql);
                 }
+                boolean tieneActivo = false;
+                try (java.sql.ResultSet columnas = sentencia.executeQuery("PRAGMA table_info(clientes)")) {
+                    while (columnas.next()) {
+                        if (columnas.getString("name").equals("activo")) tieneActivo = true;
+                    }
+                }
+                if (!tieneActivo) sentencia.executeUpdate(
+                        "ALTER TABLE clientes ADD COLUMN activo INTEGER NOT NULL DEFAULT 1 CHECK (activo IN (0,1))");
             }
             return null;
         });

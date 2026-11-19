@@ -131,6 +131,36 @@ public final class LibreriaServicio {
         return List.copyOf(clientes);
     }
 
+    public void cambiarActividadCliente(Cliente cliente, boolean activo) {
+        if (!clientes.contains(cliente)) throw new IllegalArgumentException("El cliente no pertenece a esta sesión");
+        try {
+            clientesDAO.cambiarActividad(cliente.getId(), activo);
+            cliente.cambiarActividad(activo);
+            for (Venta venta : ventas) {
+                if (venta.getCliente() != null && cliente.getId().equals(venta.getCliente().getId())) {
+                    venta.getCliente().cambiarActividad(activo);
+                }
+            }
+        } catch (SQLException error) {
+            throw errorAlGuardar(error);
+        }
+    }
+
+    public void modificarCliente(Cliente cliente, String nombre, String dni) {
+        if (!clientes.contains(cliente)) throw new IllegalArgumentException("El cliente no pertenece a esta sesión");
+        try {
+            Cliente guardado = clientesDAO.modificar(cliente, nombre, dni);
+            cliente.actualizarDesde(guardado);
+            for (Venta venta : ventas) {
+                if (venta.getCliente() != null && guardado.getId().equals(venta.getCliente().getId())) {
+                    venta.getCliente().actualizarDesde(guardado);
+                }
+            }
+        } catch (SQLException error) {
+            throw errorAlGuardar(error);
+        }
+    }
+
     public List<Empleado> empleados() {
         return List.copyOf(empleados);
     }

@@ -12,7 +12,7 @@ public final class PruebasVistas {
                 new InicioVista(), new ClienteVista(), new PagoVista(),
                 new DevolucionVista(), new VentaVista(), new CatalogoVista(),
                 new HistorialVentasVista(), new ResumenVentaVista(), new PrestamoVista(), new CategoriaVista(),
-                new EditorialVista()
+                new EditorialVista(), new AdministrarClientesVista()
             };
 
             for (PanelVista vista : vistas) {
@@ -38,7 +38,7 @@ public final class PruebasVistas {
             }
             LibroFormulario libro = new LibroFormulario();
             comprobar(libro, libro.getPreferredSize());
-            System.out.println("OK: 11 vistas en tamaño inicial y ampliado; pestañas y formulario de libros");
+            System.out.println("OK: 12 vistas en tamaño inicial y ampliado; pestañas y formulario de libros");
         });
     }
 
