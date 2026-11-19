@@ -4,6 +4,58 @@
 
 Referencia documental: 19/11/2026, árbol de trabajo de la rama tpo-grupo5, commit ba6bebcc79403c977a0231c59b3dee2ed9755394 más cambios locales de Clientes. Esta guía explica el código actual; la aprobación de los recorridos visuales se registra exclusivamente en PRUEBAS.
 
+## Primera lectura · cómo ubicarse en el código
+
+La librería es una aplicación de escritorio escrita en Java. La interfaz usa **Swing**. SQLite conserva los datos cuando cerrás el programa. Para seguir una operación en IntelliJ, empezá por el texto del botón en la vista, buscá su `addActionListener` en el controlador y entrá en el método del servicio que llama ese listener.
+
+| Si querés entender… | Empezá acá | Qué buscar |
+|---|---|---|
+| Qué se ejecuta primero | [Main](../src/aplicacion/Main.java) | `main` prepara el servicio y la ventana en el hilo de Swing y abre Inicio. |
+| A dónde lleva cada botón del menú | [InicioControlador](../src/controlador/InicioControlador.java) y [Navegacion](../src/controlador/Navegacion.java) | Seguí, por ejemplo, el botón de catálogo hasta `mostrarCatalogo()`. |
+| Cómo se dibuja una pantalla | [PrestamoVista](../src/vista/PrestamoVista.java) | Mirá cómo se construyen las tres pestañas y qué tabla contiene cada una. |
+| Qué pasa al escribir o hacer clic | [PrestamoControlador](../src/controlador/PrestamoControlador.java) | `configurarBusqueda` filtra filas. El listener de `devolver` toma el préstamo seleccionado. |
+| Qué reglas tiene un objeto | [Libro](../src/modelo/Libro.java) y [Venta](../src/modelo/Venta.java) | Un libro conoce su disponibilidad. Una venta agrupa detalles, calcula el total y controla sus cambios de estado. |
+| Quién coordina una operación completa | [LibreriaServicio](../src/servicio/LibreriaServicio.java) | `devolverPrestamo` encuentra el libro, pide que se guarde la devolución y actualiza el stock en memoria. |
+| Qué tablas existen y quién escribe en ellas | [ConexionSQLite](../src/persistencia/ConexionSQLite.java), [LibreriaDAO](../src/persistencia/LibreriaDAO.java) y [ClienteDAO](../src/persistencia/ClienteDAO.java) | `ESQUEMA` define las tablas. Los DAO son objetos que consultan y guardan datos mediante SQL. |
+| Dónde ver ejemplos que se pueden ejecutar | [PruebasPrestamos](../test/pruebas/PruebasPrestamos.java) | Seguí un préstamo hasta su devolución y el intento de devolverlo dos veces. |
+
+### Swing en las pantallas del proyecto
+
+| Pieza | Qué hace | Ejemplo para recordar |
+|---|---|---|
+| `SwingUtilities.invokeLater` | Programa el arranque en el hilo que procesa los eventos gráficos. | En `Main`, ahí se crea y muestra la ventana. |
+| `JFrame`, `JPanel`, `JTabbedPane` | Representan la ventana, una parte de su contenido y un grupo de pestañas. | `VentanaPrincipal` aloja las vistas. `PrestamoVista` agrupa nuevo préstamo, devolución e historial. |
+| `BorderLayout`, `GridLayout`, `GridBagLayout` | Distribuyen componentes por regiones, en celdas iguales o en una grilla con restricciones. | En préstamos, dos tablas van lado a lado. En `FormularioPanel`, las etiquetas y los campos quedan uno debajo del otro. |
+| `JLabel`, `JTextField`, `JButton` | Identifican un campo, reciben texto y permiten ejecutar una acción. | La etiqueta indica que podés buscar por título o ISBN. El botón registra la devolución seleccionada. |
+| `JComboBox`, `JSpinner`, `JCheckBox` | Permiten elegir o escribir una opción, ingresar un número y marcar un estado. | En `LibroFormulario` se usan para editorial, categoría y autores, cantidad en stock y libro activo. |
+| `JTable`, `DefaultTableModel`, `JScrollPane` | Muestran una tabla, mantienen sus filas en memoria y permiten desplazarse por ellas. | El controlador llena la tabla de pendientes con los resultados de la consulta de préstamos. |
+| `DocumentListener`, `TableRowSorter`, `RowFilter` | Detectan cambios de texto, ordenan filas y deciden cuáles se ven. | Al escribir parte del título, el buscador oculta las filas que no coinciden. La base conserva todos los préstamos. |
+| `ActionListener`, `JOptionPane` | Responden a un botón y muestran diálogos de entrada, confirmación o error. | Al intentar el tercer préstamo, el controlador recibe la excepción y la ventana muestra el mensaje. |
+
+**Por qué importa el índice de la fila.** Si filtrás por ISBN, el primer resultado visible puede corresponder al quinto préstamo pendiente. El controlador usa `EntradaFormulario.seleccionado`, que llama a `convertRowIndexToModel`. Así recupera el préstamo que elegiste aunque hayas filtrado u ordenado la tabla.
+
+### SQLite paso a paso con una devolución
+
+1. **Al abrir la aplicación**, `ConexionSQLite.rutaPredeterminada()` lee la propiedad `tpo.db`. Por defecto usa `datos/libreria.db`, relativa al directorio de ejecución. El driver JDBC incluido en `lib/` permite a Java abrir ese archivo con una dirección que empieza con `jdbc:sqlite:`. SQLite se ejecuta dentro del proceso de la aplicación.
+2. **Al iniciar el servicio**, se crean las tablas faltantes, se preparan los ejemplos y se reconstruyen objetos Java con los datos guardados. Cada conexión habilita las claves foráneas. Por ejemplo, `prestamos.libro_id` debe identificar una fila existente en `libros`.
+3. **Al prestar**, el DAO toma el bloqueo de escritura y cuenta las filas pendientes para el DNI. Con dos activas lanza `LimitePrestamosException`. Si corresponde prestar, inserta una fila en `prestamos` y resta una unidad a `libros.stock` dentro de la misma transacción.
+4. **Al devolver**, el DAO actualiza `devuelto_en` con la fecha y hora, comprobando el ID del préstamo, el libro y que la fecha anterior sea `NULL`. Luego suma una unidad al stock. Si había tres ejemplares antes del préstamo, quedan dos durante el préstamo y vuelven a ser tres al devolver.
+5. **Al confirmar**, JDBC hace `commit` y ambas escrituras quedan guardadas. Si falla la reposición de stock, se hace `rollback` y el préstamo sigue pendiente. El servicio actualiza el objeto Java después del guardado. El controlador consulta los préstamos y vuelve a llenar las tablas.
+6. **Al reabrir**, el historial recupera la fecha guardada. Una devolución de **venta** sigue otro recorrido y deja una fila en `devoluciones`, vinculada a `ventas`. La devolución de **préstamo** queda en la propia fila de `prestamos`.
+
+Para ver estos datos con SQLite, abrí la base de práctica indicada en el README. Esta consulta de lectura muestra un renglón por préstamo pendiente. `JOIN` conecta los identificadores guardados con los nombres que reconocés en pantalla.
+
+```sql
+SELECT p.id, l.titulo, l.isbn, c.nombre AS socio, p.fecha
+FROM prestamos AS p
+JOIN libros AS l ON l.id = p.libro_id
+JOIN clientes AS c ON c.id = p.socio_id
+WHERE p.devuelto_en IS NULL
+ORDER BY p.id DESC;
+```
+
+**Ejercicio para comprobarlo.** En una base de práctica, prestá un libro y ejecutá la consulta. Anotá el ID que aparece. Buscá el libro por ISBN en Registrar devolución y devolvelo. Al ejecutar la consulta otra vez, ese ID desaparece de los pendientes. Para encontrar el movimiento en el historial, incluí `p.devuelto_en` en el `SELECT` y quitá la condición `WHERE`.
+
 ## Índice
 
 1. [Problema de negocio y fuentes](#negocio)
@@ -185,7 +237,7 @@ Práctica: alta «Libro defensa», ISBN `9781234567897` libre, autores «Ana; Lu
 
 InicioControlador.asociar → servicio.asociar → DAO.asociar: valida DNI y consulta todas las fichas coincidentes en una transacción. Cero coincidencias: crea cliente con nombre válido y asociación de forma atómica. Una activa: asocia su ID o informa que ya es socio. Una inactiva: exige reactivar desde Administración. Varias: informa ambigüedad y no asocia automáticamente. No reactiva fichas ni cambia IDs; actualiza memoria después de guardar. Práctica: asociar el cliente de tarjeta por DNI.
 
-Inicio → [PrestamoControlador](../src/controlador/PrestamoControlador.java) → servicio.prestar → DAO.prestar: exige libro de catálogo disponible y socio activo; transacción registra prestamos y retira 1 de stock, luego disminuye el objeto. Devolver selecciona préstamo pendiente → servicio.devolverPrestamo → DAO.devolverPrestamo, marca devuelto_en y repone 1, luego actualiza memoria. Repetición/conflicto se rechazan. Práctica: prestar un libro al socio y devolverlo; verificar stock inicial y persistencia al reiniciar. La selección para nuevos préstamos excluye inactivos; el historial de préstamos sigue disponible para devolver incluso después de la baja del cliente. La devolución no exige cliente activo y repone una sola vez. No hay multas, vencimientos ni ejemplares individualizados.
+Inicio → [PrestamoControlador](../src/controlador/PrestamoControlador.java) → servicio.prestar → DAO.prestar: exige libro de catálogo disponible y socio activo; transacción registra prestamos y retira 1 de stock, luego disminuye el objeto. Devolver selecciona préstamo pendiente → servicio.devolverPrestamo → DAO.devolverPrestamo, marca devuelto_en y repone 1, luego actualiza memoria. Repetición/conflicto se rechazan. Práctica: prestar un libro al socio y devolverlo; verificar stock inicial y persistencia al reiniciar. La selección para nuevos préstamos excluye inactivos; la pestaña Registrar devolución sigue mostrando los pendientes incluso después de la baja del cliente. La devolución no exige cliente activo y repone una sola vez. No hay multas, vencimientos ni ejemplares individualizados.
 
 ### Consola y límites de conexión
 
@@ -293,6 +345,7 @@ Cada enlace apunta al archivo propio; las clases auxiliares anidadas se enumeran
 | Tipo | Responsabilidad y recorrido |
 |---|---|
 | [DevolucionNoPermitidaException](../src/excepciones/DevolucionNoPermitidaException.java) | Error de política; devolución |
+| [LimitePrestamosException](../src/excepciones/LimitePrestamosException.java) | Rechazo de un tercer préstamo activo |
 | [StockInsuficienteException](../src/excepciones/StockInsuficienteException.java) | Error de disponibilidad; venta |
 
 ### Paquete modelo
@@ -363,6 +416,7 @@ Cada enlace apunta al archivo propio; las clases auxiliares anidadas se enumeran
 | [PruebasVistas](../test/pruebas/PruebasVistas.java) | Geometría de 12 vistas, pestañas y formularios; UI headless |
 | [PruebasCategorias](../test/pruebas/PruebasCategorias.java) | Alta, edición, restricciones de baja y reapertura |
 | [PruebasEditoriales](../test/pruebas/PruebasEditoriales.java) | Renombrado compartido, baja y referencias concurrentes |
+| [PruebasPrestamos](../test/pruebas/PruebasPrestamos.java) | Límite, concurrencia, devolución y opciones del catálogo |
 | [PruebasClientesEstado](../test/pruebas/PruebasClientesEstado.java) | Migración, baja/reactivación, ventas y préstamos |
 | [PruebasClientesEdicion](../test/pruebas/PruebasClientesEdicion.java) | Edición por ID, duplicados históricos y vínculos |
 | [PruebasClientesAlta](../test/pruebas/PruebasClientesAlta.java) | Altas concurrentes, DNI y asociación transaccional |

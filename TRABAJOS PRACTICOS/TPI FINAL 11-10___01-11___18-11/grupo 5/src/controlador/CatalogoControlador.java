@@ -1,10 +1,13 @@
 package controlador;
 
 import modelo.Autor;
+import modelo.Categoria;
+import modelo.Editorial;
 import modelo.Libro;
 import vista.CatalogoVista;
 import vista.LibroFormulario;
 
+import javax.swing.JComboBox;
 import javax.swing.JOptionPane;
 import javax.swing.RowFilter;
 import javax.swing.event.DocumentEvent;
@@ -12,6 +15,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.TableRowSorter;
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -59,12 +63,23 @@ public final class CatalogoControlador {
 
     private void editar(Libro libro) {
         LibroFormulario formulario = new LibroFormulario();
+        try {
+            cargarOpciones(formulario.editorial, navegacion.servicio.editoriales().stream()
+                    .map(Editorial::getNombre).toList());
+            cargarOpciones(formulario.categoria, navegacion.servicio.categorias().stream()
+                    .map(Categoria::getNombre).toList());
+            cargarOpciones(formulario.autores, navegacion.servicio.autores().stream()
+                    .map(Autor::getNombre).toList());
+        } catch (IllegalStateException error) {
+            navegacion.ventana.error(error);
+            return;
+        }
         if (libro != null) {
             formulario.isbn.setText(libro.getIsbn());
             formulario.titulo.setText(libro.getTitulo());
-            formulario.autores.setText(nombresDeAutores(libro, "; "));
-            formulario.editorial.setText(libro.getEditorial().getNombre());
-            formulario.categoria.setText(libro.getCategoria().getNombre());
+            formulario.autores.setSelectedItem(nombresDeAutores(libro, "; "));
+            formulario.editorial.setSelectedItem(libro.getEditorial().getNombre());
+            formulario.categoria.setSelectedItem(libro.getCategoria().getNombre());
             formulario.precio.setText(libro.getPrecioVenta().toPlainString());
             formulario.stock.setValue(libro.getStock());
             formulario.activo.setSelected(libro.isActivo());
@@ -75,8 +90,8 @@ public final class CatalogoControlador {
             try {
                 formulario.stock.commitEdit();
                 navegacion.servicio.guardarLibro(libro, formulario.isbn.getText(), formulario.titulo.getText(),
-                        Arrays.asList(formulario.autores.getText().split(";", -1)), formulario.editorial.getText(),
-                        formulario.categoria.getText(), EntradaFormulario.dinero(formulario.precio.getText()),
+                        Arrays.asList(texto(formulario.autores).split(";", -1)), texto(formulario.editorial),
+                        texto(formulario.categoria), EntradaFormulario.dinero(formulario.precio.getText()),
                         (Integer) formulario.stock.getValue(), formulario.activo.isSelected());
                 actualizar();
                 return;
@@ -86,6 +101,17 @@ public final class CatalogoControlador {
                 navegacion.ventana.error(error);
             }
         }
+    }
+
+    private static void cargarOpciones(JComboBox<String> combo, List<String> opciones) {
+        opciones.stream().distinct().forEach(combo::addItem);
+        combo.setSelectedItem("");
+    }
+
+    private static String texto(JComboBox<String> combo) {
+        // Leer el editor conserva lo escrito aunque aún no se haya presionado Enter.
+        Object valor = combo.getEditor().getItem();
+        return valor == null ? "" : valor.toString().trim();
     }
 
     private void actualizar() {

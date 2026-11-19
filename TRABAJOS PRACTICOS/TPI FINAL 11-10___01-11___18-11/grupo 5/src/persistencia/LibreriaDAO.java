@@ -1,6 +1,7 @@
 package persistencia;
 
 import modelo.*;
+import excepciones.LimitePrestamosException;
 
 import java.math.BigDecimal;
 import java.nio.file.Path;
@@ -147,6 +148,18 @@ public final class LibreriaDAO {
             }
         }
         return insertar(conexion, "INSERT INTO " + tabla + " (nombre) VALUES (?) RETURNING id", nombre);
+    }
+
+    public List<Autor> listarAutores() throws SQLException {
+        List<Autor> autores = new ArrayList<>();
+        try (Connection conexion = ConexionSQLite.abrir(archivo);
+                Statement consulta = conexion.createStatement();
+                ResultSet filas = consulta.executeQuery("SELECT id, nombre FROM autores ORDER BY nombre, id")) {
+            while (filas.next()) {
+                autores.add(new Autor(filas.getLong("id"), filas.getString("nombre")));
+            }
+        }
+        return autores;
     }
 
     public List<Categoria> listarCategorias() throws SQLException {
@@ -416,6 +429,19 @@ public final class LibreriaDAO {
 
     public void prestar(String dni, Libro libro) throws SQLException {
         ConexionSQLite.transaccion(archivo, conexion -> {
+            // Bloquear antes de contar evita que dos sesiones superen el límite a la vez.
+            ejecutar(conexion, "UPDATE prestamos SET id = id WHERE 0");
+            try (PreparedStatement consulta = conexion.prepareStatement("""
+                    SELECT COUNT(*) FROM prestamos p JOIN clientes c ON c.id = p.socio_id
+                    WHERE c.dni = ? AND p.devuelto_en IS NULL
+                    """)) {
+                consulta.setString(1, dni);
+                try (ResultSet resultado = consulta.executeQuery()) {
+                    if (resultado.next() && resultado.getInt(1) >= 2) {
+                        throw new LimitePrestamosException();
+                    }
+                }
+            }
             int filas = ejecutar(conexion, """
                     INSERT INTO prestamos (socio_id, libro_id, fecha)
                     SELECT s.cliente_id, ?, ? FROM socios s JOIN clientes c ON c.id = s.cliente_id

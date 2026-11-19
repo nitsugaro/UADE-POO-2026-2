@@ -2,6 +2,8 @@
 
 Aplicación Java Swing con catálogo de libros, administración de clientes, categorías y editoriales, venta y devolución total con historial y stock persistidos en SQLite. Incluye asociación de socios y préstamos. Las cuatro administraciones y los dos recorridos de entrega están implementados con pruebas automatizadas; la verificación interactiva Swing sigue pendiente.
 
+Para estudiar el proyecto desde cero, empezá por el mapa de archivos, los componentes Swing y el ejemplo de SQLite en la [guía de estudio](Documentacion/GUIA_TPO.md).
+
 ## Abrir y ejecutar en IntelliJ
 
 1. Abrir esta carpeta, **grupo 5**, que contiene src, test, lib y datos.
@@ -27,6 +29,14 @@ java --enable-native-access=ALL-UNNAMED '-Dtpo.db=datos/practica-companeros.db' 
 ~~~
 
 Si el JDK no está en PATH, usar su ejecutable completo. En el equipo relevado existe C:/Users/facub/.jdks/openjdk-26.0.2.1/bin; esa ruta no es un requisito para otros equipos. Las rutas/entradas de estos comandos se contrastaron con el proyecto; no se ejecutó Main ni se recompiló en esta reorganización.
+
+## Préstamos, devoluciones y opciones del catálogo
+
+- Cada socio puede tener como máximo dos préstamos activos. El tercero muestra un error y no modifica el stock; el control también cubre solicitudes simultáneas desde distintas sesiones.
+- En Préstamos y devoluciones → Registrar devolución, seleccionar un préstamo pendiente y pulsar Registrar devolución. Se guarda la fecha, se repone un ejemplar y se libera un cupo. El historial conserva los préstamos devueltos.
+- En Nuevo libro y Editar libro, editorial, categoría y autores son combos editables. Se pueden seleccionar opciones existentes o escribir otras: se crean al guardar el libro. Para varios autores, separar los nombres con punto y coma.
+
+La prueba `pruebas.PruebasPrestamos` usa una base temporal y verifica límite, concurrencia, devolución, persistencia y reutilización de opciones. La suite de vistas comprueba también las pestañas nuevas sin escritorio; queda pendiente el recorrido interactivo Swing.
 
 ## Dónde continuar
 

@@ -47,6 +47,14 @@ public final class LibreriaServicio {
         return List.copyOf(libros);
     }
 
+    public List<Autor> autores() {
+        try {
+            return datos.listarAutores();
+        } catch (SQLException error) {
+            throw new IllegalStateException("No se pudieron consultar los autores.", error);
+        }
+    }
+
     public List<Categoria> categorias() {
         try {
             return datos.listarCategorias();
@@ -235,6 +243,7 @@ public final class LibreriaServicio {
     }
 
     public void devolverPrestamo(Prestamo prestamo) {
+        if (prestamo == null) throw new IllegalArgumentException("Seleccioná un préstamo pendiente");
         Libro libro = libros.stream().filter(item -> item.getId() == prestamo.libroId()).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Volvé a abrir la aplicación para cargar el libro"));
         Math.addExact(libro.getStock(), 1);

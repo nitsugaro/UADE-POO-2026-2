@@ -6,12 +6,16 @@ import modelo.Prestamo;
 import vista.PrestamoVista;
 
 import javax.swing.RowFilter;
+import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 final class PrestamoControlador {
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -19,7 +23,8 @@ final class PrestamoControlador {
     private final PrestamoVista vista = new PrestamoVista();
     private List<Libro> disponibles;
     private List<Cliente> socios;
-    private List<Prestamo> prestamos;
+    private List<Prestamo> prestamos = List.of();
+    private List<Prestamo> pendientes = List.of();
 
     PrestamoControlador(Navegacion navegacion) {
         this.navegacion = navegacion;
@@ -27,19 +32,17 @@ final class PrestamoControlador {
         vista.devolver.setEnabled(false);
         vista.libros.getSelectionModel().addListSelectionListener(evento -> habilitarPrestamo());
         vista.socios.getSelectionModel().addListSelectionListener(evento -> habilitarPrestamo());
-        configurarBusqueda();
-        vista.prestamos.getSelectionModel().addListSelectionListener(evento -> {
-            int fila = vista.prestamos.getSelectedRow();
-            vista.devolver.setEnabled(fila >= 0
-                    && prestamos.get(vista.prestamos.convertRowIndexToModel(fila)).devueltoEn() == null);
-        });
+        configurarBusqueda(vista.socios, vista.buscarSocio, vista.padron, 0, 1);
+        configurarBusqueda(vista.porDevolver, vista.buscarDevolucion, vista.pendientes, 0, 4);
+        vista.porDevolver.getSelectionModel().addListSelectionListener(evento ->
+                vista.devolver.setEnabled(vista.porDevolver.getSelectedRow() >= 0));
         vista.prestar.addActionListener(evento -> operar(() -> {
             Libro libro = disponibles.get(EntradaFormulario.seleccionado(vista.libros));
             Cliente socio = socios.get(EntradaFormulario.seleccionado(vista.socios));
             navegacion.servicio.prestar(socio.getDni(), libro);
         }, "Préstamo registrado."));
         vista.devolver.addActionListener(evento -> operar(() -> {
-            Prestamo prestamo = prestamos.get(EntradaFormulario.seleccionado(vista.prestamos));
+            Prestamo prestamo = pendientes.get(EntradaFormulario.seleccionado(vista.porDevolver));
             navegacion.servicio.devolverPrestamo(prestamo);
         }, "Devolución registrada."));
         vista.volver.addActionListener(evento -> navegacion.mostrarInicio());
@@ -49,10 +52,10 @@ final class PrestamoControlador {
         vista.prestar.setEnabled(vista.libros.getSelectedRow() >= 0 && vista.socios.getSelectedRow() >= 0);
     }
 
-    private void configurarBusqueda() {
-        var orden = new TableRowSorter<>(vista.padron);
-        vista.socios.setRowSorter(orden);
-        vista.buscarSocio.getDocument().addDocumentListener(new DocumentListener() {
+    private void configurarBusqueda(JTable tabla, JTextField campo, DefaultTableModel modelo, int... columnas) {
+        var orden = new TableRowSorter<>(modelo);
+        tabla.setRowSorter(orden);
+        campo.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent evento) {
                 filtrar();
@@ -69,13 +72,17 @@ final class PrestamoControlador {
             }
 
             private void filtrar() {
-                String busqueda = EntradaFormulario.normalizarBusqueda(vista.buscarSocio.getText());
-                vista.socios.clearSelection();
+                String busqueda = EntradaFormulario.normalizarBusqueda(campo.getText());
+                tabla.clearSelection();
                 orden.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
                     @Override
                     public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> fila) {
-                        return EntradaFormulario.normalizarBusqueda(fila.getStringValue(0)).contains(busqueda)
-                                || fila.getStringValue(1).contains(busqueda);
+                        for (int columna : columnas) {
+                            if (EntradaFormulario.normalizarBusqueda(fila.getStringValue(columna)).contains(busqueda)) {
+                                return true;
+                            }
+                        }
+                        return false;
                     }
                 });
             }
@@ -85,6 +92,7 @@ final class PrestamoControlador {
     void mostrar() {
         try {
             socios = navegacion.servicio.socios().stream().filter(Cliente::isActivo).toList();
+            vista.padron.setRowCount(0);
             for (Cliente socio : socios) {
                 vista.padron.addRow(new Object[]{socio.getNombre(), socio.getDni()});
             }
@@ -108,11 +116,20 @@ final class PrestamoControlador {
     private void actualizar() {
         vista.libros.clearSelection();
         vista.prestamos.clearSelection();
+        vista.porDevolver.clearSelection();
         disponibles = navegacion.servicio.libros().stream().filter(libro -> libro.hayDisponibilidad(1)).toList();
         prestamos = navegacion.servicio.prestamos();
         vista.catalogo.setRowCount(0);
         for (Libro libro : disponibles) {
             vista.catalogo.addRow(new Object[]{libro.getIsbn(), libro.getTitulo(), libro.getStock()});
+        }
+        pendientes = prestamos.stream().filter(prestamo -> prestamo.devueltoEn() == null).toList();
+        Map<Long, String> isbnPorLibro = navegacion.servicio.libros().stream()
+                .collect(Collectors.toMap(Libro::getId, Libro::getIsbn));
+        vista.pendientes.setRowCount(0);
+        for (Prestamo prestamo : pendientes) {
+            vista.pendientes.addRow(new Object[]{prestamo.titulo(), prestamo.socio(), prestamo.dni(),
+                prestamo.fecha().format(FECHA), isbnPorLibro.getOrDefault(prestamo.libroId(), "")});
         }
         vista.historial.setRowCount(0);
         for (Prestamo prestamo : prestamos) {

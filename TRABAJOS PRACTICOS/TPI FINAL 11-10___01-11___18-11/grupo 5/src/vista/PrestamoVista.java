@@ -7,10 +7,13 @@ import java.awt.*;
 public final class PrestamoVista extends PanelVista {
     public final DefaultTableModel catalogo = tabla("ISBN", "Título", "Disponibles");
     public final DefaultTableModel historial = tabla("Libro", "Socio", "DNI", "Fecha", "Devuelto");
+    public final DefaultTableModel pendientes = tabla("Libro", "Socio", "DNI", "Fecha del préstamo", "ISBN");
+    public final JTable porDevolver = new JTable(pendientes);
     public final DefaultTableModel padron = tabla("Nombre y apellido", "DNI");
     public final JTable socios = new JTable(padron);
     public final JTable libros = new JTable(catalogo);
     public final JTable prestamos = new JTable(historial);
+    public final JTextField buscarDevolucion = new JTextField(24);
     public final JTextField buscarSocio = new JTextField(18);
     public final JButton prestar = new JButton("Registrar préstamo");
     public final JButton devolver = new JButton("Registrar devolución");
@@ -21,6 +24,7 @@ public final class PrestamoVista extends PanelVista {
         super("Préstamos y devoluciones");
         configurar(libros);
         configurar(prestamos);
+        configurar(porDevolver);
 
         configurar(socios);
         socios.getColumnModel().getColumn(0).setPreferredWidth(210);
@@ -44,9 +48,18 @@ public final class PrestamoVista extends PanelVista {
 
         JPanel movimientos = new JPanel(new BorderLayout(0, 8));
         movimientos.add(new JScrollPane(prestamos), BorderLayout.CENTER);
-        movimientos.add(barra(devolver), BorderLayout.SOUTH);
+        JPanel devoluciones = new JPanel(new BorderLayout(0, 8));
+        JLabel etiquetaDevolucion = new JLabel("Buscar libro por título o ISBN");
+        etiquetaDevolucion.setLabelFor(buscarDevolucion);
+        FormularioPanel busquedaDevolucion = new FormularioPanel();
+        busquedaDevolucion.agregar(new JLabel("Seleccioná el préstamo del libro que se devuelve."));
+        busquedaDevolucion.agregar(barra(etiquetaDevolucion, buscarDevolucion));
+        devoluciones.add(busquedaDevolucion, BorderLayout.NORTH);
+        devoluciones.add(new JScrollPane(porDevolver), BorderLayout.CENTER);
+        devoluciones.add(barra(devolver), BorderLayout.SOUTH);
 
         opciones.addTab("Nuevo préstamo", solicitud);
+        opciones.addTab("Registrar devolución", devoluciones);
         opciones.addTab("Historial de préstamos", movimientos);
         add(opciones, BorderLayout.CENTER);
         acciones.add(volver);

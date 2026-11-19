@@ -34,6 +34,8 @@ public final class PruebasVistas {
                 if (vista instanceof PrestamoVista prestamo) {
                     prestamo.opciones.setSelectedIndex(1);
                     comprobar(vista, base);
+                    prestamo.opciones.setSelectedIndex(2);
+                    comprobar(vista, base);
                 }
             }
             LibroFormulario libro = new LibroFormulario();
